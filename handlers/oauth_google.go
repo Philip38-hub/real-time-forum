@@ -127,13 +127,9 @@ func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
     http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
-// HandleGoogleCallback handles the Google OAuth callback and user authentication
+// HandleGoogleCallback handles the Google OAuth callback
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
     addSecurityHeaders(w)
-    
-    // Prevent caching of the callback response
-    w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-    w.Header().Set("Pragma", "no-cache")
 
     fmt.Printf("\n=== Google OAuth Callback Received ===\n")
     fmt.Printf("Full URL: %s\n", r.URL.String())
@@ -295,43 +291,20 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	    }
 	}
 
-	// Store tokens and clean up old sessions
-	fmt.Println("Managing authentication tokens...")
-	
-	// Clean up old sessions for this user
-	_, err = db.Exec("DELETE FROM sessions WHERE user_id = ? AND created_at < ?",
-	    userID, time.Now().Add(-24*time.Hour))
-	if err != nil {
-	    fmt.Printf("Warning: Failed to clean up old sessions: %v\n", err)
-	}
-	
-	// Store the new tokens
+	// Store tokens
+	fmt.Println("Storing Google OAuth tokens in database...")
 	expiresAt := time.Now().Add(time.Second * time.Duration(token.Expiry.Unix()-time.Now().Unix()))
 	fmt.Printf("Token expiry set to: %v\n", expiresAt)
-	
-	tx, err := db.Begin()
+
+	_, err = db.Exec(`
+	INSERT OR REPLACE INTO google_auth (user_id, access_token, refresh_token, expires_at)
+	VALUES (?, ?, ?, ?)`,
+	userID, token.AccessToken, token.RefreshToken, expiresAt)
 	if err != nil {
-	    fmt.Printf("Failed to begin transaction: %v\n", err)
-	    RenderError(w, r, "Failed to complete authentication. Please try again.", http.StatusInternalServerError)
-	    return
-	}
-	
-	_, err = tx.Exec(`
-	    INSERT OR REPLACE INTO google_auth (user_id, access_token, refresh_token, expires_at, updated_at)
-	    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-	    userID, token.AccessToken, token.RefreshToken, expiresAt)
-	if err != nil {
-	    tx.Rollback()
-	    fmt.Printf("Failed to store token: %v\n", err)
-	    fmt.Printf("Token storage details - User ID: %s, Expires At: %v\n", userID, expiresAt)
-	    RenderError(w, r, "Failed to complete authentication. Please try signing in again.", http.StatusInternalServerError)
-	    return
-	}
-	
-	if err = tx.Commit(); err != nil {
-	    fmt.Printf("Failed to commit transaction: %v\n", err)
-	    RenderError(w, r, "Failed to complete authentication. Please try again.", http.StatusInternalServerError)
-	    return
+	fmt.Printf("Failed to store token: %v\n", err)
+	fmt.Printf("Token storage details - User ID: %s, Expires At: %v\n", userID, expiresAt)
+	RenderError(w, r, "Failed to complete authentication. Please try signing in again.", http.StatusInternalServerError)
+	return
 	}
 	fmt.Println("Successfully stored Google OAuth tokens")
 
@@ -349,24 +322,18 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Successfully created session in database")
 
-	// Set session cookie with enhanced security
+	// Set session cookie
 	fmt.Println("Setting session cookie...")
-	cookieExpiry := time.Now().Add(12 * time.Hour) // Reduced from 24 hours to 12 hours
+	cookieExpiry := time.Now().Add(24 * time.Hour)
 	http.SetCookie(w, &http.Cookie{
-	    Name:     "session_id",
-	    Value:    sessionID,
-	    Path:     "/",
-	    Expires:  cookieExpiry,
-	    HttpOnly: true,
-	    Secure:   true,
-	    SameSite: http.SameSiteStrictMode,  // Changed from Lax to Strict
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  cookieExpiry,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	})
-	
-	// Update session expiry in database
-	_, err = db.Exec("UPDATE sessions SET expires_at = ? WHERE session_id = ?", cookieExpiry, sessionID)
-	if err != nil {
-	    fmt.Printf("Warning: Failed to set session expiry: %v\n", err)
-	}
 	fmt.Printf("Set session cookie with expiry: %v\n", cookieExpiry)
 
 	// Log success message based on flow type
