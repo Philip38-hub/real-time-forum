@@ -22,7 +22,20 @@ func InitDB() {
         id TEXT PRIMARY KEY,  -- UUID as TEXT
         email TEXT UNIQUE,
         username TEXT,
-        password TEXT
+        password TEXT,
+        google_id TEXT,      -- Google's unique user ID
+        avatar_url TEXT      -- Google profile picture URL
+    );
+
+    CREATE TABLE IF NOT EXISTS google_auth (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        access_token TEXT NOT NULL,
+        refresh_token TEXT,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id)
     );
 
     CREATE TABLE IF NOT EXISTS posts (
