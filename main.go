@@ -21,9 +21,10 @@ func main() {
 
 	http.HandleFunc("/", handler)
 
-	// Initialize the database
+	// Initialize the database and OAuth
 	handlers.InitDB()
-
+	handlers.InitGoogleOAuth()
+	
 	// Start the server
 	log.Println("Server is running on http://localhost:8081")
 	err := http.ListenAndServe(":8081", nil)
@@ -54,6 +55,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		handlers.LogoutHandler(w, r)
 	case "/profile":
 		handlers.ProfileHandler(w, r)
+	// Google OAuth routes
+	case "/auth/google/login":
+		handlers.HandleGoogleLogin(w, r)
+	case "/auth/google/callback":
+		handlers.HandleGoogleCallback(w, r)
 	default:
 		handlers.RenderError(w, r, "Page not found", http.StatusNotFound)
 	}
