@@ -24,7 +24,7 @@ func main() {
 	// Initialize the database and OAuth
 	handlers.InitDB()
 	handlers.InitGoogleOAuth()
-	
+
 	// Start the server
 	log.Println("Server is running on http://localhost:8081")
 	err := http.ListenAndServe(":8081", nil)
