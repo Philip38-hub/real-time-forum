@@ -164,10 +164,20 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user exists (by email or Google ID)
 	var userID string
-	err = db.QueryRow("SELECT id FROM users WHERE email = ? OR google_id = ?", userInfo.Email, userInfo.Id).Scan(&userID)
+	var existingGoogleID string
+	err = db.QueryRow("SELECT id, google_id FROM users WHERE email = ? OR google_id = ?", userInfo.Email, userInfo.Id).Scan(&userID, &existingGoogleID)
 	if err != nil {
-	    if isRegister {
-	        // Create new user for registration
+	if isRegister {
+	// Check if email exists with traditional login
+	var traditionalUserID string
+	err = db.QueryRow("SELECT id FROM users WHERE email = ?", userInfo.Email).Scan(&traditionalUserID)
+	if err == nil {
+	    // Email exists with traditional login
+	    RenderError(w, r, "An account with this email already exists. Please login with your password or use 'Forgot Password'.", http.StatusConflict)
+	    return
+	}
+	
+	// Create new user for registration
 	        userID = uuid.New().String()
 	        _, err = db.Exec(`
 	            INSERT INTO users (id, email, username, google_id, avatar_url)
