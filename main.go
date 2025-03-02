@@ -21,9 +21,10 @@ func main() {
 
 	http.HandleFunc("/", handler)
 
-	// Initialize the database and OAuth
+	// Initialize the database and OAuth providers
 	handlers.InitDB()
 	handlers.InitGoogleOAuth()
+	handlers.InitGithubOAuth()
 
 	// Start the server
 	log.Println("Server is running on http://localhost:8081")
@@ -60,6 +61,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		handlers.HandleGoogleLogin(w, r)
 	case "/auth/google/callback":
 		handlers.HandleGoogleCallback(w, r)
+	// GitHub OAuth routes
+	case "/auth/github/login":
+		handlers.HandleGithubLogin(w, r)
+	case "/auth/github/callback":
+		handlers.HandleGithubCallback(w, r)
 	default:
 		handlers.RenderError(w, r, "Page not found", http.StatusNotFound)
 	}
