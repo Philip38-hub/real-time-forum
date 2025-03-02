@@ -887,3 +887,33 @@ img {
     font-weight: 500;
 }
 
+/* GitHub button styling */
+.github-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    color: #24292e;
+    width: 100%;
+    border-radius: 5px;
+    border: thin solid #888;
+    box-shadow: 1px 1px 1px grey;
+    white-space: nowrap;
+    padding: 12px 0;
+    margin-bottom: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.github-btn:hover {
+    background: #f8f8f8;
+}
+.github-btn img {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+}
+.github-btn span {
+    font-size: 16px;
+    font-weight: 500;
+}
+

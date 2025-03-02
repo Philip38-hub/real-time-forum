@@ -16,10 +16,14 @@ PORT=8081
 # 7. Replace the placeholders below with your actual credentials
 GOOGLE_CLIENT_ID="1082051974368-4vrk6abov8eeubo0vrmlrutlho0iupvv.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="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"
+GITHUB_CLIENT_ID="Ov23liyObIU7dL0P2sI4"
+GITHUB_CLIENT_SECRET="2bf1f84645f97e29c2b397ae6b00d0c83384cb9a"
 
 # Export environment variables
 export GOOGLE_CLIENT_ID
 export GOOGLE_CLIENT_SECRET
+export GITHUB_CLIENT_ID
+export GITHUB_CLIENT_SECRET
 
 # # Stop and remove any existing container
 # docker stop $CONTAINER_NAME 2>/dev/null && docker rm $CONTAINER_NAME 2>/dev/null
