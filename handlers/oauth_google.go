@@ -164,8 +164,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Check if user exists (by email or Google ID)
 	var userID string
-	var existingGoogleID string
-	err = db.QueryRow("SELECT id, google_id FROM users WHERE email = ? OR google_id = ?", userInfo.Email, userInfo.Id).Scan(&userID, &existingGoogleID)
+	err = db.QueryRow("SELECT id FROM users WHERE email = ?", userInfo.Email, userInfo.Id).Scan(&userID)
 	if err != nil {
 	if isRegister {
 	// Check if email exists with traditional login

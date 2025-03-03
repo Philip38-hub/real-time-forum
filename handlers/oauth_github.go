@@ -183,12 +183,12 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check if user exists (by email or GitHub ID)
+	// Check if user exists by email
 	var userID string
-	var existingGithubID string
-	err = db.QueryRow("SELECT id, github_id FROM users WHERE email = ? OR github_id = ?", githubUser.Email, githubUser.ID).Scan(&userID, &existingGithubID)
+	err = db.QueryRow("SELECT id FROM users WHERE email = ?", githubUser.Email).Scan(&userID)
 	if err != nil {
-	if isRegister {
+	    // No user found with this email
+	    if isRegister {
 	// Check if email exists with traditional login
 	var traditionalUserID string
 	err = db.QueryRow("SELECT id FROM users WHERE email = ?", githubUser.Email).Scan(&traditionalUserID)
