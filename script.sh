@@ -14,10 +14,10 @@ PORT=8081
 # 5. Create OAuth 2.0 Client ID
 # 6. Add redirect URI: http://localhost:8081/auth/google/callback
 # 7. Replace the placeholders below with your actual credentials
-GOOGLE_CLIENT_ID="1082051974368-4vrk6abov8eeubo0vrmlrutlho0iupvv.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="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"
-GITHUB_CLIENT_ID="Ov23liyObIU7dL0P2sI4"
-GITHUB_CLIENT_SECRET="2bf1f84645f97e29c2b397ae6b00d0c83384cb9a"
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+GITHUB_CLIENT_ID=""
+GITHUB_CLIENT_SECRET=""
 
 # Export environment variables
 export GOOGLE_CLIENT_ID
