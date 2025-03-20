@@ -223,6 +223,33 @@
         </main>
     </div>
     <script>
+        document.getElementById("postForm").addEventListener("submit", function (event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(this); // Get the form data
+
+            // Submit the form data asynchronously
+            fetch("/post", {
+                method: "POST",
+                body: formData,
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Hide the create post form
+                        toggleCreatePost();
+
+                        // Optionally, prepend the new post to the DOM
+                        displayNewPost(data.post);
+                    } else {
+                        alert("Failed to create post: " + (data.error || "Unknown error"));
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                });
+        });
         const socket = new WebSocket("ws://localhost:8081/ws");
 
         socket.onmessage = function (event) {
