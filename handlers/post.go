@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -111,6 +112,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert categories into the database
+	categoriesStr := strings.Join(categories, ", ")
 	for _, category := range categories {
 		_, err = db.Exec("INSERT INTO post_categories (post_id, category) VALUES (?, ?)", postID, category)
 		if err != nil {
@@ -120,6 +122,33 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Redirect to the posts page after successful creation
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	// Get username for the new post
+	var username string
+	err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&username)
+	if err != nil {
+		log.Printf("Error retrieving username: %v", err)
+		username = "Unknown User"
+	}
+
+	// Create a new post object for broadcasting
+	newPost := map[string]interface{}{
+		"ID":           postID,
+		"Title":        title,
+		"Content":      content,
+		"ImagePath":    imagePath,
+		"Username":     username,
+		"Categories":   categoriesStr,
+		"CreatedAt":    time.Now().Format("Jan 02, 2006 15:04"),
+		"LikeCount":    0,
+		"DislikeCount": 0,
+		"Comments":     []interface{}{},
+	}
+
+	// Broadcast the new post to all connected clients
+	BroadcastMessage("new_post", newPost)
+
+	// Return a JSON response instead of redirecting
+	w.Header().Set("Content-Type", "application/json")
+	// w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(newPost)
 }
