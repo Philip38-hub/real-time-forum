@@ -223,6 +223,41 @@
         </main>
     </div>
     <script>
+        const socket = new WebSocket("ws://localhost:8081/ws");
+
+        socket.onmessage = function (event) {
+            console.log("Received WebSocket message:", event.data);
+
+            const data = JSON.parse(event.data);
+            if (data.type === "new_post") {
+                console.log("New post received:", data.content);
+                displayNewPost(data.content);
+            }
+        };
+
+        function displayNewPost(post) {
+            const postContainer = document.getElementById("posts");
+
+            const postElement = document.createElement("div");
+            postElement.className = "post";
+            postElement.innerHTML = `
+        <p class="posted-on">Posted on: ${post.CreatedAt}</p>
+        <strong>
+            <p>${post.Username}</p>
+        </strong>
+        <h3>${post.Title}</h3>
+        <p>${post.Content}</p>
+        ${post.ImagePath ? `<img src="${post.ImagePath}" alt="Post Image" class="post-image">` : ""}
+        <p class="categories">Categories: <span>${post.Categories}</span></p>
+        <hr>
+    `;
+
+            // Add the new post at the top of the feed
+            postContainer.prepend(postElement);
+        }
+
+    </script>
+    <script>
         let isProcessing = false; // Debounce flag
 
         function toggleLike(postId, isLike) {
