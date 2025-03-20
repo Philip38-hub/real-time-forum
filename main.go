@@ -56,6 +56,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		handlers.LogoutHandler(w, r)
 	case "/profile":
 		handlers.ProfileHandler(w, r)
+	// WebSocket endpoint
+	case "/ws":
+		handlers.WebSocketHandler(w, r)
 	// Google OAuth routes
 	case "/auth/google/login":
 		handlers.HandleGoogleLogin(w, r)
