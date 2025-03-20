@@ -147,8 +147,11 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	// Broadcast the new post to all connected clients
 	BroadcastMessage("new_post", newPost)
 
-	// Return a JSON response instead of redirecting
+	// Return a JSON response indicating success
 	w.Header().Set("Content-Type", "application/json")
 	// w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newPost)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+        "success": true,
+        "post":    newPost,
+    })
 }
