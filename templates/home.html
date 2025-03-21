@@ -444,6 +444,113 @@
             // Scroll to the bottom of the comments section
             commentsSection.scrollTop = commentsSection.scrollHeight;
         }
+        }
+
+        // Add this function to handle reply form submission via AJAX
+        function setupReplyForms() {
+            document.addEventListener('submit', function (event) {
+                // Check if this is a reply form
+                if (event.target.closest('.reply-form')) {
+                    event.preventDefault();
+
+                    const form = event.target;
+
+                    //form.dataset.initialized = true;
+                    const formData = new FormData(form);
+
+                    // Submit the form data asynchronously
+                    fetch('/comment', {
+                        method: 'POST',
+                        body: formData,
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Clear the textarea after successful submission
+                                form.querySelector('textarea').value = '';
+
+                                // Hide the form
+                                const replyFormId = form.closest('.reply-form').id;
+                                const commentId = replyFormId.replace('reply-form-', '');
+                                toggleReplyForm(commentId);
+                            } else {
+                                alert("Failed to post reply: " + (data.error || "Unknown error"));
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            alert("An error occurred. Please try again.");
+                        });
+                }
+            });
+        }
+
+        // Call this function when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            setupReplyForms();
+        });
+
+        // Function to set up event listeners for dynamically added reply forms
+        function setupDynamicReplyForms() {
+            // Mutation observer to detect when new reply forms are added to the DOM
+            const observer = new MutationObserver(function (mutations) {
+                mutations.forEach(function (mutation) {
+                    if (mutation.addedNodes.length) {
+                        mutation.addedNodes.forEach(function (node) {
+                            if (node.nodeType === 1) { // Element node
+                                // Find any new reply forms and set up their event handlers
+                                const replyForms = node.querySelectorAll('.reply-form form');
+                                replyForms.forEach(form => {
+                                    if (form.dataset.initialized) {
+                                        return; // Skip if already initialized
+                                    }
+                                    form.setAttribute('data-initialized', true);
+                                    form.addEventListener('submit', function (event) {
+                                        event.preventDefault();
+
+                                        const formData = new FormData(this);
+
+                                        fetch('/comment', {
+                                            method: 'POST',
+                                            body: formData,
+                                        })
+                                            .then(response => response.json())
+                                            .then(data => {
+                                                if (data.success) {
+                                                    // Clear the textarea
+                                                    this.querySelector('textarea').value = '';
+
+                                                    // Hide the form
+                                                    const replyFormId = this.closest('.reply-form').id;
+                                                    const commentId = replyFormId.replace('reply-form-', '');
+                                                    toggleReplyForm(commentId);
+                                                } else {
+                                                    alert("Failed to post reply: " + (data.error || "Unknown error"));
+                                                }
+                                            })
+                                            .catch(error => {
+                                                console.error("Error:", error);
+                                                alert("An error occurred. Please try again.");
+                                            });
+                                    });
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Start observing the entire document for changes
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
+
+        // Call this function when the page loads
+        document.addEventListener('DOMContentLoaded', function () {
+            setupDynamicReplyForms();
+        });
 
     </script>
     <script>
