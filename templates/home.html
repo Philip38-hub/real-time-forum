@@ -223,7 +223,7 @@
         </main>
     </div>
     <script>
-        document.getElementById("postForm").addEventListener("submit", function (event) {
+        document.querySelector("form").addEventListener("submit", function (event) {
             event.preventDefault(); // Prevent the default form submission
 
             const formData = new FormData(this); // Get the form data
@@ -267,6 +267,7 @@
 
             const postElement = document.createElement("div");
             postElement.className = "post";
+            postElement.setAttribute("data-category", post.Categories); // Add data-category attribute
             postElement.innerHTML = `
         <p class="posted-on">Posted on: ${post.CreatedAt}</p>
         <strong>
@@ -276,7 +277,30 @@
         <p>${post.Content}</p>
         ${post.ImagePath ? `<img src="${post.ImagePath}" alt="Post Image" class="post-image">` : ""}
         <p class="categories">Categories: <span>${post.Categories}</span></p>
-        <hr>
+        <div class="post-actions">
+            <button class="like-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', true)">
+                <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
+            </button>
+            <button class="dislike-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', false)">
+                <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
+            </button>
+            <button class="comment-button" onclick="toggleCommentForm('${post.ID}')">
+                <i class="fas fa-comment"></i> Comments
+            </button>
+        </div>
+        <div class="comments-section" id="comments-${post.ID}" style="display: none;">
+            <div class="comment-form" id="comment-form-${post.ID}" style="display: none;">
+                {{if $.IsLoggedIn}}
+                <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
+                    <input type="hidden" name="post_id" value="${post.ID}">
+                    <textarea name="content" placeholder="Write your comment..." required></textarea>
+                    <button type="submit">Comment</button>
+                </form>
+                {{else}}
+                <p>Please <a href="/login">login</a> to comment.</p>
+                {{end}}
+            </div>
+        </div>
     `;
 
             // Add the new post at the top of the feed
