@@ -250,6 +250,33 @@
                     alert("An error occurred. Please try again.");
                 });
         });
+
+        document.querySelectorAll(".comment-form form").forEach(form => {
+            form.addEventListener("submit", function (event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const formData = new FormData(this); // Get the form data
+
+                // Submit the form data asynchronously
+                fetch("/comment", {
+                    method: "POST",
+                    body: formData,
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Optionally, prepend the new comment to the DOM
+                            displayNewComment(data.comment);
+                        } else {
+                            alert("Failed to post comment: " + (data.error || "Unknown error"));
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error:", error);
+                        alert("An error occurred. Please try again.");
+                    });
+            });
+        });
         const socket = new WebSocket("ws://localhost:8081/ws");
 
         socket.onmessage = function (event) {
@@ -259,6 +286,12 @@
             if (data.type === "new_post") {
                 console.log("New post received:", data.content);
                 displayNewPost(data.content);
+                displayNewComment(data);
+            }
+
+            if (data.type === "newComment") {
+                console.log("New comment received:", data.content);
+                displayNewComment(data);
             }
         };
 
@@ -269,42 +302,98 @@
             postElement.className = "post";
             postElement.setAttribute("data-category", post.Categories); // Add data-category attribute
             postElement.innerHTML = `
-        <p class="posted-on">Posted on: ${post.CreatedAt}</p>
-        <strong>
-            <p>${post.Username}</p>
-        </strong>
-        <h3>${post.Title}</h3>
-        <p>${post.Content}</p>
-        ${post.ImagePath ? `<img src="${post.ImagePath}" alt="Post Image" class="post-image">` : ""}
-        <p class="categories">Categories: <span>${post.Categories}</span></p>
-        <div class="post-actions">
-            <button class="like-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', true)">
-                <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
-            </button>
-            <button class="dislike-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', false)">
-                <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
-            </button>
-            <button class="comment-button" onclick="toggleCommentForm('${post.ID}')">
-                <i class="fas fa-comment"></i> Comments
-            </button>
-        </div>
-        <div class="comments-section" id="comments-${post.ID}" style="display: none;">
-            <div class="comment-form" id="comment-form-${post.ID}" style="display: none;">
-                {{if $.IsLoggedIn}}
-                <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
-                    <input type="hidden" name="post_id" value="${post.ID}">
-                    <textarea name="content" placeholder="Write your comment..." required></textarea>
-                    <button type="submit">Comment</button>
-                </form>
-                {{else}}
-                <p>Please <a href="/login">login</a> to comment.</p>
-                {{end}}
-            </div>
-        </div>
-    `;
+                <p class="posted-on">Posted on: ${post.CreatedAt}</p>
+                <strong>
+                    <p>${post.Username}</p>
+                </strong>
+                <h3>${post.Title}</h3>
+                <p>${post.Content}</p>
+                ${post.ImagePath ? `<img src="${post.ImagePath}" alt="Post Image" class="post-image">` : ""}
+                <p class="categories">Categories: <span>${post.Categories}</span></p>
+                <div class="post-actions">
+                    <button class="like-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', true)">
+                        <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
+                    </button>
+                    <button class="dislike-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', false)">
+                        <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
+                    </button>
+                    <button class="comment-button" onclick="toggleCommentForm('${post.ID}')">
+                        <i class="fas fa-comment"></i> Comments
+                    </button>
+                </div>
+                <div class="comments-section" id="comments-${post.ID}" style="display: none;">
+                    <div class="comment-form" id="comment-form-${post.ID}" style="display: none;">
+                        {{if $.IsLoggedIn}}
+                        <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
+                            <input type="hidden" name="post_id" value="${post.ID}">
+                            <textarea name="content" placeholder="Write your comment..." required></textarea>
+                            <button type="submit">Comment</button>
+                        </form>
+                        {{else}}
+                        <p>Please <a href="/login">login</a> to comment.</p>
+                        {{end}}
+                    </div>
+                </div>
+            `;
 
             // Add the new post at the top of the feed
             postContainer.prepend(postElement);
+        }
+
+        // Display a new comment
+        function displayNewComment(data) {
+            if (!data || !data.content) {
+                console.error("Invalid data received:", data);
+                return;
+            }
+
+                      const comment = data.content; // Extract the comment object from the WebSocket message
+            const commentsSection = document.getElementById(`comments-${comment.PostID}`);
+
+            if (!commentsSection) {
+                console.error("Comments section not found for post ID:", comment.PostID);
+                return;
+            }
+
+            if (comment.ParentID === null) {
+                comment.ParentID = 0;
+            }
+
+            const commentElement = document.createElement("div");
+            commentElement.className = "comment";
+            commentElement.setAttribute("data-comment-id", comment.ID);
+            commentElement.innerHTML = `
+                <div class="comment-content">${comment.Content}</div>
+                <div class="comment-meta">
+                    <span class="comment-author">Posted by ${comment.Username}</span>
+                    <span class="comment-date">${comment.CreatedAt}</span>
+                </div>
+                <div class="comment-actions">
+                    <button class="like-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', true)">
+                        <i class="fas fa-thumbs-up"></i> <span class="like-count">${comment.LikeCount}</span>
+                    </button>
+                    <button class="dislike-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', false)">
+                        <i class="fas fa-thumbs-down"></i> <span class="dislike-count">${comment.DislikeCount}</span>
+                    </button>
+                    <button class="reply-button" onclick="toggleReplyForm('${comment.ID}')">
+                        Reply
+                    </button>
+                </div>
+                <div class="reply-form" id="reply-form-${comment.ID}" style="display: none;">
+                    <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
+                        <input type="hidden" name="post_id" value="${comment.PostID}">
+                        <input type="hidden" name="parent_id" value="${comment.ID}">
+                        <textarea name="content" placeholder="Write your reply..." required></textarea>
+                        <button type="submit">Reply</button>
+                    </form>
+                </div>
+            `;
+
+            // Add the new comment to the comments section
+            commentsSection.appendChild(commentElement);
+
+            // Scroll to the bottom of the comments section
+            commentsSection.scrollTop = commentsSection.scrollHeight;
         }
 
     </script>
