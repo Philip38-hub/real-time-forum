@@ -286,10 +286,9 @@
             if (data.type === "new_post") {
                 console.log("New post received:", data.content);
                 displayNewPost(data.content);
-                displayNewComment(data);
             }
 
-            if (data.type === "newComment") {
+            if (data.type === "newComment" || data.type === "newReply") {
                 console.log("New comment received:", data.content);
                 displayNewComment(data);
             }
