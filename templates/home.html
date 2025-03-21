@@ -346,17 +346,66 @@
                 return;
             }
 
-                      const comment = data.content; // Extract the comment object from the WebSocket message
-            const commentsSection = document.getElementById(`comments-${comment.PostID}`);
+            const comment = data.content; // Extract the comment object
 
-            if (!commentsSection) {
-                console.error("Comments section not found for post ID:", comment.PostID);
-                return;
-            }
+            // Check if this is a reply (has a parent_id) or a top-level comment
+            if (comment.ParentID) {
+                // This is a reply - find the parent comment's replies container
+                const parentComment = document.querySelector(`.comment[data-comment-id="${comment.ParentID}"]`);
+                if (!parentComment) {
+                    console.error("Parent comment not found for reply:", comment.ParentID);
+                    return;
+                }
 
-            if (comment.ParentID === null) {
-                comment.ParentID = 0;
-            }
+                // Check if the replies container exists, create it if not
+                let repliesContainer = parentComment.querySelector('.replies');
+                if (!repliesContainer) {
+                    repliesContainer = document.createElement('div');
+                    repliesContainer.className = 'replies';
+                    parentComment.appendChild(repliesContainer);
+                }
+
+                // Create the reply element
+                const replyElement = document.createElement('div');
+                replyElement.className = 'comment reply';
+                replyElement.setAttribute('data-comment-id', comment.ID);
+                replyElement.innerHTML = `
+                    <div class="comment-content">${comment.Content}</div>
+                    <div class="comment-meta">
+                        <span class="comment-author">Posted by ${comment.Username}</span>
+                        <span class="comment-date">${comment.CreatedAt}</span>
+                    </div>
+                    <div class="comment-actions">
+                        <button class="like-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', true)">
+                            <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
+                        </button>
+                        <button class="dislike-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', false)">
+                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
+                        </button>
+                    </div>
+                `;
+
+                // Add the reply to the replies container
+                repliesContainer.appendChild(replyElement);
+
+                // Update the reply count display if it exists
+                const replyButton = parentComment.querySelector('.reply-button');
+                if (replyButton) {
+                    // Extract current reply count if it exists
+                    const currentCountMatch = replyButton.textContent.match(/\((\d+)\)/);
+                    const currentCount = currentCountMatch ? parseInt(currentCountMatch[1]) : 0;
+                    const newCount = currentCount + 1;
+
+                    // Update the button text with the new count
+                    replyButton.textContent = `Reply (${newCount})`;
+                }
+            } else {
+                // This is a top-level comment - handle as before
+                const commentsSection = document.getElementById(`comments-${comment.PostID}`);
+                if (!commentsSection) {
+                    console.error("Comments section not found for post ID:", comment.PostID);
+                    return;
+                }
 
             const commentElement = document.createElement("div");
             commentElement.className = "comment";
@@ -386,6 +435,7 @@
                         <button type="submit">Reply</button>
                     </form>
                 </div>
+                <div class="replies" id="replies-${comment.ID}"></div>
             `;
 
             // Add the new comment to the comments section
