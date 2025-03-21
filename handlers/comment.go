@@ -122,8 +122,13 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 		"ReplyCount":   0,
 	}
 
+	messageType := "newComment"
+	if parentIDInt != nil {
+		messageType = "newReply"
+	}
+
 	// Broadcast the new comment
-	BroadcastMessage("newComment", newComment)
+	BroadcastMessage(messageType, newComment)
 
 	// Return a JSON response indicating success
 	w.Header().Set("Content-Type", "application/json")
