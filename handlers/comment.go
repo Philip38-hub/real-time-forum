@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,46 +54,43 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	var parentIDInt *int
 	if parentID != "" {
-		// Convert parentID to int
-		parentIDInt, err := strconv.Atoi(parentID)
+		parentIDIntVal, err := strconv.Atoi(parentID)
 		if err != nil {
 			http.Error(w, "Invalid parent comment ID format", http.StatusBadRequest)
 			return
 		}
+		parentIDInt = &parentIDIntVal
+	}
 
-		// Verify that the parent comment exists
-		var parentPostID int
-		err = db.QueryRow("SELECT post_id FROM comments WHERE id = ?", parentIDInt).Scan(&parentPostID)
-		if err == sql.ErrNoRows {
-			http.Error(w, "Parent comment not found", http.StatusNotFound)
-			return
-		} else if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-
-		// Proceed with inserting the reply since the parent comment exists
-		_, err = tx.Exec(
+	// Insert the comment
+	var result sql.Result
+	if parentIDInt != nil {
+		// Insert a reply
+		result, err = tx.Exec(
 			"INSERT INTO comments (post_id, user_id, content, parent_id, created_at) VALUES (?, ?, ?, ?, ?)",
-			postIDInt, userID, content, parentIDInt, time.Now(),
+			postIDInt, userID, content, *parentIDInt, time.Now(),
 		)
-		if err != nil {
-			tx.Rollback()
-			http.Error(w, "Failed to insert comment", http.StatusInternalServerError)
-			return
-		}
 	} else {
-		// This is a top-level comment
-		_, err = tx.Exec(
+		// Insert a top-level comment
+		result, err = tx.Exec(
 			"INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
 			postIDInt, userID, content, time.Now(),
 		)
-		if err != nil {
-			tx.Rollback()
-			http.Error(w, "Failed to insert comment", http.StatusInternalServerError)
-			return
-		}
+	}
+	if err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to insert comment", http.StatusInternalServerError)
+		return
+	}
+
+	// Retrieve the last inserted comment ID
+	commentID, err := result.LastInsertId()
+	if err != nil {
+		tx.Rollback()
+		http.Error(w, "Failed to retrieve comment ID", http.StatusInternalServerError)
+		return
 	}
 
 	// Commit the transaction
@@ -100,8 +99,38 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect back to the post
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	// Get username for the new post
+	var username string
+	err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&username)
+	if err != nil {
+		log.Printf("Error retrieving username: %v", err)
+		username = "Unknown User"
+	}
+
+	// Create a new comment object for broadcasting
+	newComment := map[string]interface{}{
+		"ID":           commentID,
+		"PostID":       postIDInt,
+		"UserID":       userID,
+		"Content":      content,
+		"CreatedAt":    time.Now().Format("Jan 02, 2006 15:04"),
+		"Username":     username,
+		"ParentID":     parentIDInt, // parentID is nil for top-level comments
+		"LikeCount":    0,
+		"DislikeCount": 0,
+		"Replies":      []interface{}{},
+		"ReplyCount":   0,
+	}
+
+	// Broadcast the new comment
+	BroadcastMessage("newComment", newComment)
+
+	// Return a JSON response indicating success
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"post":    newComment,
+	})
 }
 
 // Fetch comments for a specific post
