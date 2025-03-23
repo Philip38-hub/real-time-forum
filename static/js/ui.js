@@ -7,7 +7,7 @@ const UI = {
         const postsHeading = document.getElementById('postsHeading');
 
         toggleElement(createPostForm);
-        
+
         if (!createPostForm.classList.contains('hidden')) {
             hideElement(postsList);
             hideElement(postsHeading);
@@ -21,10 +21,10 @@ const UI = {
     toggleCommentSection(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
         const commentForm = document.getElementById(`comment-form-${postId}`);
-        
+
         if (commentsSection) {
             toggleElement(commentsSection);
-            
+
             if (!commentsSection.classList.contains('hidden')) {
                 showElement(commentForm);
             } else {
@@ -49,32 +49,41 @@ const UI = {
 
     // Update UI after like/dislike
     updateLikeUI(element, data) {
-        if (!element) return;
-        
+        if (!element || !data) {
+            console.error('Failed to update like status: Element or data is undefined.');
+            return;
+        }
+
         const isPost = element.hasAttribute('data-post-id');
-        const container = isPost 
+        const container = isPost
             ? element.closest('.post')
             : element.closest('.comment');
-            
-        if (!container) return;
-        
+
+        if (!container) {
+            console.error('Failed to find container for the like button.');
+            return;
+        }
+
         const likeButton = container.querySelector('.like-button');
         const dislikeButton = container.querySelector('.dislike-button');
-        
-        if (!likeButton || !dislikeButton) return;
-        
+
+        if (!likeButton || !dislikeButton) {
+            console.error('Like/Dislike buttons not found in the container.');
+            return;
+        }
+
         const likeCount = likeButton.querySelector('.like-count');
         const dislikeCount = dislikeButton.querySelector('.dislike-count');
-        
+
         // Update the counts
         if (isPost) {
             if (likeCount) likeCount.textContent = data.like_count;
             if (dislikeCount) dislikeCount.textContent = data.dislike_count;
         } else {
-            if (likeCount) likeCount.textContent = data.likeCount;
-            if (dislikeCount) dislikeCount.textContent = data.dislikeCount;
+            if (likeCount) likeCount.textContent = data.like_count;
+            if (dislikeCount) dislikeCount.textContent = data.dislike_count;
         }
-        
+
         // Update button styles
         if ((isPost && data.user_liked === true) || (!isPost && data.userLiked === true)) {
             likeButton.classList.add('active');
