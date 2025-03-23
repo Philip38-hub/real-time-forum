@@ -8,13 +8,6 @@ import (
 	"strconv"
 )
 
-// CommentLikeResponse is the response for like/dislike actions
-type CommentLikeResponse struct {
-	LikeCount    int   `json:"likeCount"`
-	DislikeCount int   `json:"dislikeCount"`
-	UserLiked    *bool `json:"userLiked"`
-}
-
 // CommentLikeHandler handles liking/disliking comments
 func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -22,16 +15,42 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get user ID from session
-	userID := GetUserIdFromSession(w, r)
-	if userID == "" {
-		http.Error(w, "Please log in to like or dislike comments", http.StatusUnauthorized)
+	// Check if the user is logged in
+	session, err := r.Cookie("session_id")
+	if err != nil {
+		// User is not logged in, return a custom JSON response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":  false,
+			"error":    "You must be logged in to like a comment",
+			"redirect": "/login", // Add a redirect URL
+		})
+		return
+	}
+
+	// Get the user ID from the session
+	var userID string
+	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", session.Value).Scan(&userID)
+	if err != nil {
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse the form data
+	err = r.ParseForm()
+	if err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
 		return
 	}
 
 	// Parse comment ID and like status from request
 	commentID := r.FormValue("comment_id")
-	isLike := r.FormValue("is_like")
+	isLike, err := strconv.ParseBool(r.FormValue("is_like"))
+	if err != nil {
+		http.Error(w, "Invalid like/dislike value", http.StatusBadRequest)
+		return
+	}
 
 	if commentID == "" {
 		http.Error(w, "Comment ID is required", http.StatusBadRequest)
@@ -57,90 +76,77 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isLikeBool := isLike == "true"
-
-	// Start transaction
-	tx, err := db.Begin()
-	if err != nil {
-		log.Printf("Error starting transaction: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback()
-
-	// Check if user has already liked/disliked this comment
-	var existingIsLike sql.NullBool
-	err = tx.QueryRow(
-		"SELECT is_like FROM comment_likes WHERE comment_id = ? AND user_id = ?",
-		commentIDInt, userID,
-	).Scan(&existingIsLike)
-
+	// Check if the user has already liked/disliked the comment
+	var existingIsLike bool
+	err = db.QueryRow("SELECT is_like FROM comment_likes WHERE comment_id = ? AND user_id = ?", commentIDInt, userID).Scan(&existingIsLike)
 	if err != nil && err != sql.ErrNoRows {
-		log.Printf("Error checking existing like: %v", err)
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	if existingIsLike.Valid {
-		if existingIsLike.Bool == isLikeBool {
-			// Remove the like/dislike if clicking the same button
-			_, err = tx.Exec("DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?",
-				commentIDInt, userID)
+	// If the user is trying to toggle their like/dislike
+	if err != sql.ErrNoRows {
+		if existingIsLike == isLike {
+			// User is trying to remove their like/dislike
+			_, err = db.Exec("DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?", commentIDInt, userID)
+			if err != nil {
+				http.Error(w, "Database error", http.StatusInternalServerError)
+				return
+			}
 		} else {
-			// Update from like to dislike or vice versa
-			_, err = tx.Exec("UPDATE comment_likes SET is_like = ? WHERE comment_id = ? AND user_id = ?",
-				isLikeBool, commentIDInt, userID)
+			// User is changing their like/dislike
+			_, err = db.Exec("UPDATE comment_likes SET is_like = ? WHERE comment_id = ? AND user_id = ?", isLike, commentIDInt, userID)
+			if err != nil {
+				http.Error(w, "Database error", http.StatusInternalServerError)
+				return
+			}
 		}
 	} else {
-		// Add new like/dislike
-		_, err = tx.Exec("INSERT INTO comment_likes (comment_id, user_id, is_like) VALUES (?, ?, ?)",
-			commentIDInt, userID, isLikeBool)
+		// User is adding a new like/dislike
+		_, err = db.Exec("INSERT INTO comment_likes (comment_id, user_id, is_like) VALUES (?, ?, ?)", commentIDInt, userID, isLike)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
 	}
 
+	// Get the updated like and dislike counts
+	var likeCount, dislikeCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 1", commentIDInt).Scan(&likeCount)
 	if err != nil {
-		log.Printf("Error updating like status: %v", err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	err = db.QueryRow("SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 0", commentIDInt).Scan(&dislikeCount)
+	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	// Get updated counts and user's current like status
-	var response CommentLikeResponse
+	// Check if the user has liked/disliked the comment
 	var userLiked sql.NullBool
-	err = tx.QueryRow(`
-		SELECT 
-			(SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 1),
-			(SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 0),
-			CASE 
-				WHEN EXISTS (SELECT 1 FROM comment_likes WHERE comment_id = ? AND user_id = ?)
-				THEN (SELECT is_like FROM comment_likes WHERE comment_id = ? AND user_id = ?)
-				ELSE NULL 
-			END
-	`, commentIDInt, commentIDInt, commentIDInt, userID, commentIDInt, userID).Scan(&response.LikeCount, &response.DislikeCount, &userLiked)
-
-	if err != nil {
-		log.Printf("Error getting updated counts: %v", err)
+	err = db.QueryRow("SELECT is_like FROM comment_likes WHERE comment_id = ? AND user_id = ?", commentIDInt, userID).Scan(&userLiked)
+	if err != nil && err != sql.ErrNoRows {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	if userLiked.Valid {
-		response.UserLiked = &userLiked.Bool
-	} else {
-		response.UserLiked = nil
+	// Construct the reaction data to send
+	reactionData := map[string]interface{}{
+		"target_id":     commentIDInt,
+		"target_type":   "comment",
+		"like_count":    likeCount,
+		"dislike_count": dislikeCount,
+		"user_liked":    userLiked.Bool, // Whether the user has liked this comment
 	}
 
-	// Commit transaction
-	if err = tx.Commit(); err != nil {
-		log.Printf("Error committing transaction: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
+	// Broadcast the reaction update to all connected clients
+	BroadcastMessage("commentLikeUpdate", reactionData)
 
-	// Return response as JSON
+	// Return a success response
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
-		return
-	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"reactions": reactionData,
+	})
 }
