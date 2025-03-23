@@ -1,245 +1,293 @@
 package handlers
 
 import (
-	"database/sql"
-	"net/http"
-	"strconv"
-	"time"
+    "database/sql"
+    "encoding/json"
+    "net/http"
+    "strconv"
+    "time"
 )
 
 var PostID int
 
-// Comment handler for processing form submissions
+// CommentHandler now returns JSON instead of redirecting
 func CommentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        SendError(w, "Invalid request method", http.StatusMethodNotAllowed)
+        return
+    }
 
-	postID := r.FormValue("post_id")
-	postIDInt, err := strconv.Atoi(postID)
-	if err != nil {
-		http.Error(w, "Invalid post ID format", http.StatusBadRequest)
-		return
-	} else {
-		PostID = postIDInt
-	}
-	content := r.FormValue("content")
-	parentID := r.FormValue("parent_id") // New: Get parent comment ID if this is a reply
-	userID := GetUserIdFromSession(w, r) // Fetch user ID from session
+    postID := r.FormValue("post_id")
+    postIDInt, err := strconv.Atoi(postID)
+    if err != nil {
+        SendError(w, "Invalid post ID format", http.StatusBadRequest)
+        return
+    } else {
+        PostID = postIDInt
+    }
+    content := r.FormValue("content")
+    parentID := r.FormValue("parent_id")
+    userID := GetUserIdFromSession(w, r)
 
-	if userID == "" {
-		http.Error(w, "Please log in to comment on posts", http.StatusUnauthorized)
-		return
-	}
+    if userID == "" {
+        SendError(w, "Please log in to comment on posts", http.StatusUnauthorized)
+        return
+    }
 
-	// Validate required fields
-	if postID == "" {
-		http.Error(w, "Post ID is required", http.StatusBadRequest)
-		return
-	}
+    if postID == "" {
+        SendError(w, "Post ID is required", http.StatusBadRequest)
+        return
+    }
 
-	if content == "" {
-		http.Error(w, "Comment content cannot be empty", http.StatusBadRequest)
-		return
-	}
+    if content == "" {
+        SendError(w, "Comment content cannot be empty", http.StatusBadRequest)
+        return
+    }
 
-	// Start a transaction
-	tx, err := db.Begin()
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback()
+    tx, err := db.Begin()
+    if err != nil {
+        SendError(w, "Database error", http.StatusInternalServerError)
+        return
+    }
+    defer tx.Rollback()
 
-	if parentID != "" {
-		// Convert parentID to int
-		parentIDInt, err := strconv.Atoi(parentID)
-		if err != nil {
-			http.Error(w, "Invalid parent comment ID format", http.StatusBadRequest)
-			return
-		}
+    var result sql.Result
+    if parentID != "" {
+        parentIDInt, err := strconv.Atoi(parentID)
+        if err != nil {
+            SendError(w, "Invalid parent comment ID format", http.StatusBadRequest)
+            return
+        }
 
-		// Verify that the parent comment exists
-		var parentPostID int
-		err = db.QueryRow("SELECT post_id FROM comments WHERE id = ?", parentIDInt).Scan(&parentPostID)
-		if err == sql.ErrNoRows {
-			http.Error(w, "Parent comment not found", http.StatusNotFound)
-			return
-		} else if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
+        var parentPostID int
+        err = db.QueryRow("SELECT post_id FROM comments WHERE id = ?", parentIDInt).Scan(&parentPostID)
+        if err == sql.ErrNoRows {
+            SendError(w, "Parent comment not found", http.StatusNotFound)
+            return
+        } else if err != nil {
+            SendError(w, "Database error", http.StatusInternalServerError)
+            return
+        }
 
-		// Proceed with inserting the reply since the parent comment exists
-		_, err = tx.Exec(
-			"INSERT INTO comments (post_id, user_id, content, parent_id, created_at) VALUES (?, ?, ?, ?, ?)",
-			postIDInt, userID, content, parentIDInt, time.Now(),
-		)
-		if err != nil {
-			tx.Rollback()
-			http.Error(w, "Failed to insert comment", http.StatusInternalServerError)
-			return
-		}
-	} else {
-		// This is a top-level comment
-		_, err = tx.Exec(
-			"INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
-			postIDInt, userID, content, time.Now(),
-		)
-		if err != nil {
-			tx.Rollback()
-			http.Error(w, "Failed to insert comment", http.StatusInternalServerError)
-			return
-		}
-	}
+        result, err = tx.Exec(
+            "INSERT INTO comments (post_id, user_id, content, parent_id, created_at) VALUES (?, ?, ?, ?, ?)",
+            postIDInt, userID, content, parentIDInt, time.Now(),
+        )
+    } else {
+        result, err = tx.Exec(
+            "INSERT INTO comments (post_id, user_id, content, created_at) VALUES (?, ?, ?, ?)",
+            postIDInt, userID, content, time.Now(),
+        )
+    }
 
-	// Commit the transaction
-	if err = tx.Commit(); err != nil {
-		http.Error(w, "Error committing transaction", http.StatusInternalServerError)
-		return
-	}
+    if err != nil {
+        SendError(w, "Failed to insert comment", http.StatusInternalServerError)
+        return
+    }
 
-	// Redirect back to the post
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+    if err = tx.Commit(); err != nil {
+        SendError(w, "Error committing transaction", http.StatusInternalServerError)
+        return
+    }
+
+    // Get the newly created comment's ID
+    commentID, _ := result.LastInsertId()
+
+    // Fetch the complete comment data to return
+    comment, err := GetCommentByID(int(commentID), userID)
+    if err != nil {
+        SendError(w, "Error fetching new comment", http.StatusInternalServerError)
+        return
+    }
+
+    // Return JSON response
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "success": true,
+        "comment": comment,
+    })
 }
 
-// Fetch comments for a specific post
-var GetCommentsForPost = func(postID int) ([]Comment, error) {
-	// First, get all comments for this post
-	rows, err := db.Query(`
-		SELECT 
-			c.id, 
-			c.post_id,
-			c.user_id,
-			c.content,
-			c.created_at,
-			u.username,
-			c.parent_id,
-			(SELECT COUNT(*) FROM comments r WHERE r.parent_id = c.id) as reply_count,
-			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
-			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 0) as dislike_count
-		FROM comments c
-		JOIN users u ON c.user_id = u.id
-		WHERE c.post_id = ? AND c.parent_id IS NULL
-		ORDER BY c.created_at DESC
-	`, postID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// GetCommentsForPost fetches comments with user-specific like information
+var GetCommentsForPost = func(postID int, userID string) ([]Comment, error) {
+    rows, err := db.Query(`
+        SELECT 
+            c.id, 
+            c.post_id,
+            c.user_id,
+            c.content,
+            c.created_at,
+            u.username,
+            c.parent_id,
+            (SELECT COUNT(*) FROM comments r WHERE r.parent_id = c.id) as reply_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 0) as dislike_count,
+            CASE WHEN ul.is_like = 1 THEN true WHEN ul.is_like = 0 THEN false ELSE false END as user_liked,
+            CASE WHEN ul.is_like = 0 THEN true ELSE false END as user_disliked
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN comment_likes ul ON c.id = ul.comment_id AND ul.user_id = ?
+        WHERE c.post_id = ? AND c.parent_id IS NULL
+        ORDER BY c.created_at DESC
+    `, userID, postID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var comments []Comment
-	for rows.Next() {
-		var comment Comment
-		err := rows.Scan(
-			&comment.ID,
-			&comment.PostID,
-			&comment.UserID,
-			&comment.Content,
-			&comment.CreatedAt,
-			&comment.Username,
-			&comment.ParentID,
-			&comment.ReplyCount,
-			&comment.LikeCount,
-			&comment.DislikeCount,
-		)
-		if err != nil {
-			return nil, err
-		}
+    var comments []Comment
+    for rows.Next() {
+        var comment Comment
+        err := rows.Scan(
+            &comment.ID,
+            &comment.PostID,
+            &comment.UserID,
+            &comment.Content,
+            &comment.CreatedAt,
+            &comment.Username,
+            &comment.ParentID,
+            &comment.ReplyCount,
+            &comment.LikeCount,
+            &comment.DislikeCount,
+            &comment.UserLiked,
+            &comment.UserDisliked,
+        )
+        if err != nil {
+            return nil, err
+        }
 
-		// Get replies for this comment
-		replies, err := GetCommentReplies(comment.ID)
-		if err != nil {
-			return nil, err
-		}
-		comment.Replies = replies
+        replies, err := GetCommentReplies(comment.ID, userID)
+        if err != nil {
+            return nil, err
+        }
+        comment.Replies = replies
 
-		comments = append(comments, comment)
-	}
+        comments = append(comments, comment)
+    }
 
-	return comments, nil
+    return comments, nil
 }
 
-// Get replies for a specific comment
-var GetCommentReplies = func(commentID int) ([]Comment, error) {
-	rows, err := db.Query(`
-		SELECT 
-			c.id, 
-			c.post_id,
-			c.user_id,
-			c.content,
-			c.created_at,
-			u.username,
-			c.parent_id,
-			0 as reply_count,
-			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
-			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 0) as dislike_count
-		FROM comments c
-		JOIN users u ON c.user_id = u.id
-		WHERE c.parent_id = ?
-		ORDER BY c.created_at ASC
-	`, commentID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+// GetCommentReplies fetches replies with user-specific like information
+var GetCommentReplies = func(commentID int, userID string) ([]Comment, error) {
+    rows, err := db.Query(`
+        SELECT 
+            c.id, 
+            c.post_id,
+            c.user_id,
+            c.content,
+            c.created_at,
+            u.username,
+            c.parent_id,
+            0 as reply_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 0) as dislike_count,
+            CASE WHEN ul.is_like = 1 THEN true WHEN ul.is_like = 0 THEN false ELSE false END as user_liked,
+            CASE WHEN ul.is_like = 0 THEN true ELSE false END as user_disliked
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN comment_likes ul ON c.id = ul.comment_id AND ul.user_id = ?
+        WHERE c.parent_id = ?
+        ORDER BY c.created_at ASC
+    `, userID, commentID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var replies []Comment
-	for rows.Next() {
-		var reply Comment
-		err := rows.Scan(
-			&reply.ID,
-			&reply.PostID,
-			&reply.UserID,
-			&reply.Content,
-			&reply.CreatedAt,
-			&reply.Username,
-			&reply.ParentID,
-			&reply.ReplyCount,
-			&reply.LikeCount,
-			&reply.DislikeCount,
-		)
-		if err != nil {
-			return nil, err
-		}
-		replies = append(replies, reply)
-	}
+    var replies []Comment
+    for rows.Next() {
+        var reply Comment
+        err := rows.Scan(
+            &reply.ID,
+            &reply.PostID,
+            &reply.UserID,
+            &reply.Content,
+            &reply.CreatedAt,
+            &reply.Username,
+            &reply.ParentID,
+            &reply.ReplyCount,
+            &reply.LikeCount,
+            &reply.DislikeCount,
+            &reply.UserLiked,
+            &reply.UserDisliked,
+        )
+        if err != nil {
+            return nil, err
+        }
+        replies = append(replies, reply)
+    }
 
-	return replies, nil
+    return replies, nil
 }
 
-// Get user ID from session
+// GetCommentByID fetches a single comment with all its data
+func GetCommentByID(commentID int, userID string) (Comment, error) {
+    var comment Comment
+    err := db.QueryRow(`
+        SELECT 
+            c.id, 
+            c.post_id,
+            c.user_id,
+            c.content,
+            c.created_at,
+            u.username,
+            c.parent_id,
+            (SELECT COUNT(*) FROM comments r WHERE r.parent_id = c.id) as reply_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
+            (SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 0) as dislike_count,
+            CASE WHEN ul.is_like = 1 THEN true WHEN ul.is_like = 0 THEN false ELSE false END as user_liked,
+            CASE WHEN ul.is_like = 0 THEN true ELSE false END as user_disliked
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        LEFT JOIN comment_likes ul ON c.id = ul.comment_id AND ul.user_id = ?
+        WHERE c.id = ?
+    `, userID, commentID).Scan(
+        &comment.ID,
+        &comment.PostID,
+        &comment.UserID,
+        &comment.Content,
+        &comment.CreatedAt,
+        &comment.Username,
+        &comment.ParentID,
+        &comment.ReplyCount,
+        &comment.LikeCount,
+        &comment.DislikeCount,
+        &comment.UserLiked,
+        &comment.UserDisliked,
+    )
+    return comment, err
+}
+
+// GetUserIdFromSession retrieves the user ID from the session
 var GetUserIdFromSession = func(w http.ResponseWriter, r *http.Request) string {
-	sessionCookie, err := r.Cookie("session_id")
-	if err != nil {
-		return ""
-	}
+    sessionCookie, err := r.Cookie("session_id")
+    if err != nil {
+        return ""
+    }
 
-	var userID string
-	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
-	if err == sql.ErrNoRows {
-		// Clear invalid session
-		http.SetCookie(w, &http.Cookie{
-			Name:     "session_id",
-			Value:    "",
-			Path:     "/",
-			Expires:  time.Unix(0, 0),
-			MaxAge:   -1,
-			HttpOnly: true,
-		})
-		return ""
-	} else if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return ""
-	}
+    var userID string
+    err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
+    if err == sql.ErrNoRows {
+        http.SetCookie(w, &http.Cookie{
+            Name:     "session_id",
+            Value:    "",
+            Path:     "/",
+            Expires:  time.Unix(0, 0),
+            MaxAge:   -1,
+            HttpOnly: true,
+        })
+        return ""
+    } else if err != nil {
+        return ""
+    }
 
-	return userID
+    return userID
 }
 
-// Fetch a single post by ID
+// GetPostByID fetches a single post by ID
 func GetPostByID(id string) (Post, error) {
-	var post Post
-	err := db.QueryRow("SELECT id, title, content FROM posts WHERE id = ?", id).Scan(&post.ID, &post.Title, &post.Content)
-	return post, err
+    var post Post
+    err := db.QueryRow("SELECT id, title, content FROM posts WHERE id = ?", id).Scan(&post.ID, &post.Title, &post.Content)
+    return post, err
 }
