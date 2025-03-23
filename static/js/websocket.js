@@ -61,17 +61,30 @@ class ForumWebSocket {
             case 'newReply':
                 UI.addNewComment(data.content, true);
                 break;
+            case 'postLikeUpdate':
+                UI.updateLikeUI(
+                    document.querySelector(`[data-post-id='${data.content.target_id}']`),
+                    data.content
+                );
+                break;
+            case 'commentLikeUpdate':
+                UI.updateLikeUI(
+                    document.querySelector(`[data-comment-id='${data.content.target_id}']`),
+                    data.content
+                );
+                break;
             default:
                 logger.warn('Unknown WebSocket message type:', data.type);
         }
     }
+
 
     // Schedule a reconnection attempt with exponential backoff
     scheduleReconnect() {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
             this.reconnectAttempts++;
             const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-            
+
             logger.info(`Attempting to reconnect in ${delay / 1000} seconds...`);
             setTimeout(() => this.init(), delay);
         } else {
