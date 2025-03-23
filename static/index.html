@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <title>Forum</title>
+</head>
+<body>
+    <header id="header-container">
+        <!-- Header will be rendered by Header component -->
+    </header>
+
+    <div class="container">
+        <aside class="sidebar" id="sidebar-container">
+            <!-- Sidebar will be rendered by Sidebar component -->
+        </aside>
+
+        <main id="main-container">
+            <!-- Main content will be rendered by router -->
+        </main>
+    </div>
+
+    <!-- Core -->
+    <script src="/static/js/store.js"></script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/api.js"></script>
+
+    <!-- Components -->
+    <script src="/static/js/components/Header.js"></script>
+    <script src="/static/js/components/Sidebar.js"></script>
+    <script src="/static/js/components/PostList.js"></script>
+    <script src="/static/js/components/PostForm.js"></script>
+    <script src="/static/js/components/Comments.js"></script>
+
+    <!-- Main app -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
