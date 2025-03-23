@@ -12,7 +12,7 @@
 
 <body>
     <header>
-        <div class="hamburger" onclick="toggleMenu()">
+        <div class="hamburger" id="menu-toggle">
             <i class="fas fa-bars"></i>
         </div>
         <div class="logo">
@@ -25,7 +25,7 @@
                 <a href="/profile" class="material-icons"
                     style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">person</a>
             </div>
-            <a href="#" class="auth-button create-post" onclick="toggleCreatePost()">Create Post</a>
+            <a href="#" class="auth-button create-post" id="create-post-btn">Create Post</a>
             <a href="/logout" class="logout-icon" title="Logout">
                 <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A7C8C; margin-top: 10px;"></i>
             </a>
@@ -54,17 +54,12 @@
                 <li><a href="/filter?category=beauty">Beauty</a></li>
                 <li><a href="/filter?category=jobs">Jobs</a></li>
             </ul>
-            <!-- <div class="sidebar-footer">
-                {{if .IsLoggedIn}}
-                <a href="/logout" class="logout-link">Logout</a>
-                {{end}}
-            </div> -->
         </aside>
         <main>
             {{if .IsLoggedIn}}
-            <div id="createPostForm" style="display: none;">
+            <div id="createPostForm" class="hidden">
                 <h1>Create a New Post</h1>
-                <form method="POST" action="/post" enctype="multipart/form-data" onsubmit="return validateCategories()">
+                <form id="create-post-form" method="POST" action="/post" enctype="multipart/form-data">
                     <label for="title">Title:</label>
                     <input type="text" id="title" name="title" required>
                     <br>
@@ -78,7 +73,7 @@
                     <br>
 
                     <label for="category">Category:</label>
-                    <div id="category" name="category" class="checkbox-group">
+                    <div id="category" class="checkbox-group">
                         <label><input type="checkbox" name="category" value="technology"> Technology</label>
                         <label><input type="checkbox" name="category" value="general"> General</label>
                         <label><input type="checkbox" name="category" value="lifestyle"> Lifestyle</label>
@@ -96,7 +91,7 @@
                     <br>
 
                     <button type="submit">Post</button>
-                    <button type="button" onclick="toggleCreatePost()">Cancel</button>
+                    <button type="button" id="cancel-post-btn">Cancel</button>
                 </form>
             </div>
             {{end}}
@@ -111,35 +106,35 @@
             <div id="posts">
                 {{if .Posts}}
                 {{range .Posts}}
-                <div class="post" data-category="{{.Categories}}">
+                <div class="post" data-category="{{.Categories}}" data-post-id="{{.ID}}">
                     <p class="posted-on">Posted on: {{.CreatedAt}}</p>
                     <strong>
                         <p>{{.Username}}</p>
                     </strong>
                     <h3>{{.Title}}</h3>
                     <p>{{.Content}}</p>
-                    {{if .ImagePath}} <!-- Display image if it exists -->
+                    {{if .ImagePath}}
                     <img src="{{.ImagePath}}" alt="Post Image" class="post-image">
                     {{end}}
                     <p class="categories">Categories: <span>{{.Categories}}</span></p>
                     <div class="post-actions">
-                        <button class="like-button" data-post-id="{{.ID}}" onclick="toggleLike('{{.ID}}', true)">
+                        <button class="like-button" data-post-id="{{.ID}}" data-action="like">
                             <i class="fas fa-thumbs-up"></i> <span class="like-count">{{.LikeCount}}</span>
                         </button>
-                        <button class="dislike-button" data-post-id="{{.ID}}" onclick="toggleLike('{{.ID}}', false)">
+                        <button class="dislike-button" data-post-id="{{.ID}}" data-action="dislike">
                             <i class="fas fa-thumbs-down"></i> <span class="dislike-count">{{.DislikeCount}}</span>
                         </button>
-                        <button class="comment-button" onclick="toggleCommentForm('{{.ID}}')">
+                        <button class="comment-button" data-post-id="{{.ID}}">
                             <i class="fas fa-comment"></i> Comments
                         </button>
                     </div>
 
                     <!-- Comments Section -->
-                    <div class="comments-section" id="comments-{{.ID}}" style="display: none;">
+                    <div class="comments-section hidden" id="comments-{{.ID}}">
                         <!-- Comment Form -->
-                        <div class="comment-form" id="comment-form-{{.ID}}" style="display: none;">
+                        <div class="comment-form hidden" id="comment-form-{{.ID}}">
                             {{if $.IsLoggedIn}}
-                            <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
+                            <form class="comment-form-element" data-post-id="{{.ID}}">
                                 <input type="hidden" name="post_id" value="{{.ID}}">
                                 <textarea name="content" placeholder="Write your comment..." required></textarea>
                                 <button type="submit">Comment</button>
@@ -159,21 +154,19 @@
                             </div>
                             {{if $.IsLoggedIn}}
                             <div class="comment-actions">
-                                <button class="like-button" data-comment-id="{{.ID}}"
-                                    onclick="toggleCommentLike('{{.ID}}', true)">
+                                <button class="like-button" data-comment-id="{{.ID}}" data-action="like">
                                     <i class="fas fa-thumbs-up"></i> <span class="like-count">{{.LikeCount}}</span>
                                 </button>
-                                <button class="dislike-button" data-comment-id="{{.ID}}"
-                                    onclick="toggleCommentLike('{{.ID}}', false)">
+                                <button class="dislike-button" data-comment-id="{{.ID}}" data-action="dislike">
                                     <i class="fas fa-thumbs-down"></i> <span
                                         class="dislike-count">{{.DislikeCount}}</span>
                                 </button>
-                                <button class="reply-button" onclick="toggleReplyForm('{{.ID}}')">
+                                <button class="reply-button" data-comment-id="{{.ID}}">
                                     Reply{{if gt .ReplyCount 0}} ({{.ReplyCount}}){{end}}
                                 </button>
                             </div>
-                            <div class="reply-form" id="reply-form-{{.ID}}" style="display: none;">
-                                <form method="POST" action="/comment">
+                            <div class="reply-form hidden" id="reply-form-{{.ID}}">
+                                <form class="reply-form-element" data-comment-id="{{.ID}}">
                                     <input type="hidden" name="post_id" value="{{.PostID}}">
                                     <input type="hidden" name="parent_id" value="{{.ID}}">
                                     <textarea name="content" placeholder="Write your reply..." required></textarea>
@@ -194,13 +187,11 @@
                                     </div>
                                     {{if $.IsLoggedIn}}
                                     <div class="comment-actions">
-                                        <button class="like-button" data-comment-id="{{.ID}}"
-                                            onclick="toggleCommentLike('{{.ID}}', true)">
+                                        <button class="like-button" data-comment-id="{{.ID}}" data-action="like">
                                             <i class="fas fa-thumbs-up"></i> <span
                                                 class="like-count">{{.LikeCount}}</span>
                                         </button>
-                                        <button class="dislike-button" data-comment-id="{{.ID}}"
-                                            onclick="toggleCommentLike('{{.ID}}', false)">
+                                        <button class="dislike-button" data-comment-id="{{.ID}}" data-action="dislike">
                                             <i class="fas fa-thumbs-down"></i> <span
                                                 class="dislike-count">{{.DislikeCount}}</span>
                                         </button>
@@ -222,539 +213,12 @@
             </div>
         </main>
     </div>
-    <script>
-        document.querySelector("form").addEventListener("submit", function (event) {
-            event.preventDefault(); // Prevent the default form submission
 
-            const formData = new FormData(this); // Get the form data
-
-            // Submit the form data asynchronously
-            fetch("/post", {
-                method: "POST",
-                body: formData,
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Hide the create post form
-                        toggleCreatePost();
-
-                        // Optionally, prepend the new post to the DOM
-                        displayNewPost(data.post);
-                    } else {
-                        alert("Failed to create post: " + (data.error || "Unknown error"));
-                    }
-                })
-                .catch(error => {
-                    console.error("Error:", error);
-                    alert("An error occurred. Please try again.");
-                });
-        });
-
-        document.querySelectorAll(".comment-form form").forEach(form => {
-            form.addEventListener("submit", function (event) {
-                event.preventDefault(); // Prevent the default form submission
-
-                const formData = new FormData(this); // Get the form data
-
-                // Submit the form data asynchronously
-                fetch("/comment", {
-                    method: "POST",
-                    body: formData,
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            // Optionally, prepend the new comment to the DOM
-                            displayNewComment(data.comment);
-                        } else {
-                            alert("Failed to post comment: " + (data.error || "Unknown error"));
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error:", error);
-                        alert("An error occurred. Please try again.");
-                    });
-            });
-        });
-        const socket = new WebSocket("ws://localhost:8081/ws");
-
-        socket.onmessage = function (event) {
-            console.log("Received WebSocket message:", event.data);
-
-            const data = JSON.parse(event.data);
-            if (data.type === "new_post") {
-                console.log("New post received:", data.content);
-                displayNewPost(data.content);
-            }
-
-            if (data.type === "newComment" || data.type === "newReply") {
-                console.log("New comment received:", data.content);
-                displayNewComment(data);
-            }
-        };
-
-        function displayNewPost(post) {
-            const postContainer = document.getElementById("posts");
-
-            const postElement = document.createElement("div");
-            postElement.className = "post";
-            postElement.setAttribute("data-category", post.Categories); // Add data-category attribute
-            postElement.innerHTML = `
-                <p class="posted-on">Posted on: ${post.CreatedAt}</p>
-                <strong>
-                    <p>${post.Username}</p>
-                </strong>
-                <h3>${post.Title}</h3>
-                <p>${post.Content}</p>
-                ${post.ImagePath ? `<img src="${post.ImagePath}" alt="Post Image" class="post-image">` : ""}
-                <p class="categories">Categories: <span>${post.Categories}</span></p>
-                <div class="post-actions">
-                    <button class="like-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', true)">
-                        <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
-                    </button>
-                    <button class="dislike-button" data-post-id="${post.ID}" onclick="toggleLike('${post.ID}', false)">
-                        <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
-                    </button>
-                    <button class="comment-button" onclick="toggleCommentForm('${post.ID}')">
-                        <i class="fas fa-comment"></i> Comments
-                    </button>
-                </div>
-                <div class="comments-section" id="comments-${post.ID}" style="display: none;">
-                    <div class="comment-form" id="comment-form-${post.ID}" style="display: none;">
-                        {{if $.IsLoggedIn}}
-                        <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
-                            <input type="hidden" name="post_id" value="${post.ID}">
-                            <textarea name="content" placeholder="Write your comment..." required></textarea>
-                            <button type="submit">Comment</button>
-                        </form>
-                        {{else}}
-                        <p>Please <a href="/login">login</a> to comment.</p>
-                        {{end}}
-                    </div>
-                </div>
-            `;
-
-            // Add the new post at the top of the feed
-            postContainer.prepend(postElement);
-        }
-
-        // Display a new comment
-        function displayNewComment(data) {
-            if (!data || !data.content) {
-                console.error("Invalid data received:", data);
-                return;
-            }
-
-            const comment = data.content; // Extract the comment object
-
-            // Check if this is a reply (has a parent_id) or a top-level comment
-            if (comment.ParentID) {
-                // This is a reply - find the parent comment's replies container
-                const parentComment = document.querySelector(`.comment[data-comment-id="${comment.ParentID}"]`);
-                if (!parentComment) {
-                    console.error("Parent comment not found for reply:", comment.ParentID);
-                    return;
-                }
-
-                // Check if the replies container exists, create it if not
-                let repliesContainer = parentComment.querySelector('.replies');
-                if (!repliesContainer) {
-                    repliesContainer = document.createElement('div');
-                    repliesContainer.className = 'replies';
-                    parentComment.appendChild(repliesContainer);
-                }
-
-                // Create the reply element
-                const replyElement = document.createElement('div');
-                replyElement.className = 'comment reply';
-                replyElement.setAttribute('data-comment-id', comment.ID);
-                replyElement.innerHTML = `
-                    <div class="comment-content">${comment.Content}</div>
-                    <div class="comment-meta">
-                        <span class="comment-author">Posted by ${comment.Username}</span>
-                        <span class="comment-date">${comment.CreatedAt}</span>
-                    </div>
-                    <div class="comment-actions">
-                        <button class="like-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', true)">
-                            <i class="fas fa-thumbs-up"></i> <span class="like-count">0</span>
-                        </button>
-                        <button class="dislike-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', false)">
-                            <i class="fas fa-thumbs-down"></i> <span class="dislike-count">0</span>
-                        </button>
-                    </div>
-                `;
-
-                // Add the reply to the replies container
-                repliesContainer.appendChild(replyElement);
-
-                // Update the reply count display if it exists
-                const replyButton = parentComment.querySelector('.reply-button');
-                if (replyButton) {
-                    // Extract current reply count if it exists
-                    const currentCountMatch = replyButton.textContent.match(/\((\d+)\)/);
-                    const currentCount = currentCountMatch ? parseInt(currentCountMatch[1]) : 0;
-                    const newCount = currentCount + 1;
-
-                    // Update the button text with the new count
-                    replyButton.textContent = `Reply (${newCount})`;
-                }
-            } else {
-                // This is a top-level comment - handle as before
-                const commentsSection = document.getElementById(`comments-${comment.PostID}`);
-                if (!commentsSection) {
-                    console.error("Comments section not found for post ID:", comment.PostID);
-                    return;
-                }
-
-            const commentElement = document.createElement("div");
-            commentElement.className = "comment";
-            commentElement.setAttribute("data-comment-id", comment.ID);
-            commentElement.innerHTML = `
-                <div class="comment-content">${comment.Content}</div>
-                <div class="comment-meta">
-                    <span class="comment-author">Posted by ${comment.Username}</span>
-                    <span class="comment-date">${comment.CreatedAt}</span>
-                </div>
-                <div class="comment-actions">
-                    <button class="like-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', true)">
-                        <i class="fas fa-thumbs-up"></i> <span class="like-count">${comment.LikeCount}</span>
-                    </button>
-                    <button class="dislike-button" data-comment-id="${comment.ID}" onclick="toggleCommentLike('${comment.ID}', false)">
-                        <i class="fas fa-thumbs-down"></i> <span class="dislike-count">${comment.DislikeCount}</span>
-                    </button>
-                    <button class="reply-button" onclick="toggleReplyForm('${comment.ID}')">
-                        Reply
-                    </button>
-                </div>
-                <div class="reply-form" id="reply-form-${comment.ID}" style="display: none;">
-                    <form method="POST" action="/comment" onsubmit="return validateCommentForm(event, this)">
-                        <input type="hidden" name="post_id" value="${comment.PostID}">
-                        <input type="hidden" name="parent_id" value="${comment.ID}">
-                        <textarea name="content" placeholder="Write your reply..." required></textarea>
-                        <button type="submit">Reply</button>
-                    </form>
-                </div>
-                <div class="replies" id="replies-${comment.ID}"></div>
-            `;
-
-            // Add the new comment to the comments section
-            commentsSection.appendChild(commentElement);
-
-            // Scroll to the bottom of the comments section
-            commentsSection.scrollTop = commentsSection.scrollHeight;
-        }
-        }
-
-        // Add this function to handle reply form submission via AJAX
-        function setupReplyForms() {
-            document.addEventListener('submit', function (event) {
-                // Check if this is a reply form
-                if (event.target.closest('.reply-form')) {
-                    event.preventDefault();
-
-                    const form = event.target;
-
-                    //form.dataset.initialized = true;
-                    const formData = new FormData(form);
-
-                    // Submit the form data asynchronously
-                    fetch('/comment', {
-                        method: 'POST',
-                        body: formData,
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Clear the textarea after successful submission
-                                form.querySelector('textarea').value = '';
-
-                                // Hide the form
-                                const replyFormId = form.closest('.reply-form').id;
-                                const commentId = replyFormId.replace('reply-form-', '');
-                                toggleReplyForm(commentId);
-                            } else {
-                                alert("Failed to post reply: " + (data.error || "Unknown error"));
-                            }
-                        })
-                        .catch(error => {
-                            console.error("Error:", error);
-                            alert("An error occurred. Please try again.");
-                        });
-                }
-            });
-        }
-
-        // Call this function when the page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            setupReplyForms();
-        });
-
-        // Function to set up event listeners for dynamically added reply forms
-        function setupDynamicReplyForms() {
-            // Mutation observer to detect when new reply forms are added to the DOM
-            const observer = new MutationObserver(function (mutations) {
-                mutations.forEach(function (mutation) {
-                    if (mutation.addedNodes.length) {
-                        mutation.addedNodes.forEach(function (node) {
-                            if (node.nodeType === 1) { // Element node
-                                // Find any new reply forms and set up their event handlers
-                                const replyForms = node.querySelectorAll('.reply-form form');
-                                replyForms.forEach(form => {
-                                    if (form.dataset.initialized) {
-                                        return; // Skip if already initialized
-                                    }
-                                    form.setAttribute('data-initialized', true);
-                                    form.addEventListener('submit', function (event) {
-                                        event.preventDefault();
-
-                                        const formData = new FormData(this);
-
-                                        fetch('/comment', {
-                                            method: 'POST',
-                                            body: formData,
-                                        })
-                                            .then(response => response.json())
-                                            .then(data => {
-                                                if (data.success) {
-                                                    // Clear the textarea
-                                                    this.querySelector('textarea').value = '';
-
-                                                    // Hide the form
-                                                    const replyFormId = this.closest('.reply-form').id;
-                                                    const commentId = replyFormId.replace('reply-form-', '');
-                                                    toggleReplyForm(commentId);
-                                                } else {
-                                                    alert("Failed to post reply: " + (data.error || "Unknown error"));
-                                                }
-                                            })
-                                            .catch(error => {
-                                                console.error("Error:", error);
-                                                alert("An error occurred. Please try again.");
-                                            });
-                                    });
-                                });
-                            }
-                        });
-                    }
-                });
-            });
-
-            // Start observing the entire document for changes
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
-
-        // Call this function when the page loads
-        document.addEventListener('DOMContentLoaded', function () {
-            setupDynamicReplyForms();
-        });
-
-    </script>
-    <script>
-        let isProcessing = false; // Debounce flag
-
-        function toggleLike(postId, isLike) {
-            if (isProcessing) return; // Prevent multiple rapid clicks
-            isProcessing = true;
-
-            fetch('/like', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `post_id=${postId}&is_like=${isLike}`
-            })
-                .then(response => {
-                    if (response.status === 401) {
-                        // User is not logged in, redirect to login page
-                        window.location.href = '/login';
-                        return;
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data && data.success) {
-                        // Update the like and dislike counts
-                        const likeCountElement = document.querySelector(`.like-button[data-post-id="${postId}"] .like-count`);
-                        const dislikeCountElement = document.querySelector(`.dislike-button[data-post-id="${postId}"] .dislike-count`);
-
-                        likeCountElement.textContent = data.like_count;
-                        dislikeCountElement.textContent = data.dislike_count;
-
-                        // Update button styles
-                        const likeButton = document.querySelector(`.like-button[data-post-id="${postId}"]`);
-                        const dislikeButton = document.querySelector(`.dislike-button[data-post-id="${postId}"]`);
-
-                        if (isLike) {
-                            likeButton.classList.toggle('active');
-                            dislikeButton.classList.remove('active');
-                        } else {
-                            dislikeButton.classList.toggle('active');
-                            likeButton.classList.remove('active');
-                        }
-                    } else if (data && data.success) {
-                        console.error('Error:', data.error);
-                        alert(data.error); // Optional: Show the error message
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
-                })
-                .finally(() => {
-                    isProcessing = false; // Reset debounce flag
-                });
-        }
-
-        function toggleCommentLike(commentId, isLike) {
-            if (isProcessing) return; // Prevent multiple rapid clicks
-            isProcessing = true;
-
-            fetch('/comment/like', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `comment_id=${commentId}&is_like=${isLike}`
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            throw new Error(text);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Find the clicked button directly using the data-comment-id attribute
-                    const clickedButton = document.querySelector(`button[data-comment-id="${commentId}"][class*="-button"]`);
-                    if (!clickedButton) return;
-
-                    // Find the parent comment container
-                    const comment = clickedButton.closest('.comment');
-                    if (!comment) return;
-
-                    // Find the like/dislike buttons within this comment
-                    const likeButton = comment.querySelector('.like-button[data-comment-id="' + commentId + '"]');
-                    const dislikeButton = comment.querySelector('.dislike-button[data-comment-id="' + commentId + '"]');
-
-                    if (!likeButton || !dislikeButton) return;
-
-                    const likeCountElement = likeButton.querySelector('.like-count');
-                    const dislikeCountElement = dislikeButton.querySelector('.dislike-count');
-
-                    // Update the counts
-                    if (likeCountElement) likeCountElement.textContent = data.likeCount;
-                    if (dislikeCountElement) dislikeCountElement.textContent = data.dislikeCount;
-
-                    // Update button styles based on userLiked
-                    if (data.userLiked === true) {
-                        likeButton.classList.add('active');
-                        dislikeButton.classList.remove('active');
-                    } else if (data.userLiked === false) {
-                        dislikeButton.classList.add('active');
-                        likeButton.classList.remove('active');
-                    } else {
-                        // If userLiked is null, remove both active states
-                        likeButton.classList.remove('active');
-                        dislikeButton.classList.remove('active');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert(error.message || 'An error occurred. Please try again.');
-                })
-                .finally(() => {
-                    isProcessing = false; // Reset debounce flag
-                });
-        }
-
-        function toggleCreatePost() {
-            const createPostForm = document.getElementById('createPostForm');
-            const postsList = document.getElementById('posts');
-            const postsHeading = document.getElementById('postsHeading');
-
-            if (createPostForm.style.display === 'none') {
-                createPostForm.style.display = 'block';
-                postsList.style.display = 'none';
-                postsHeading.style.display = 'none'; // Hide the heading when the form is shown
-            } else {
-                createPostForm.style.display = 'none';
-                postsList.style.display = 'block';
-                postsHeading.style.display = 'block'; // Show the heading when the form is hidden
-            }
-        }
-
-        function validateCategories() {
-            const checkboxes = document.querySelectorAll('input[name="category"]');
-            let isChecked = false;
-
-            checkboxes.forEach((checkbox) => {
-                if (checkbox.checked) {
-                    isChecked = true;
-                }
-            });
-
-            if (!isChecked) {
-                alert("Please select at least one category.");
-                return false; // Prevent form submission
-            }
-            return true; // Allow form submission
-        }
-
-        function toggleCommentForm(postId) {
-            const commentForm = document.getElementById(`comment-form-${postId}`);
-            const commentsSection = document.getElementById(`comments-${postId}`);
-            if (commentForm.style.display === 'none') {
-                commentForm.style.display = 'block';
-                commentsSection.style.display = 'block'; // Show comments section when the form is shown
-            } else {
-                commentForm.style.display = 'none';
-                commentsSection.style.display = 'none'; // Hide comments section when the form is hidden
-            }
-        }
-
-        function toggleReplyForm(commentId) {
-            const replyForm = document.getElementById(`reply-form-${commentId}`);
-            if (replyForm.style.display === 'none') {
-                replyForm.style.display = 'block';
-            } else {
-                replyForm.style.display = 'none';
-            }
-        }
-
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.style.display = sidebar.style.display === 'block' ? 'none' : 'block';
-        }
-
-        // Function to validate the comment form
-        function validateCommentForm(event, form) {
-            // Get the textarea element
-            const textarea = form.querySelector('textarea[name="content"]');
-
-            // Check if the textarea is empty or contains only whitespace
-            if (!textarea.value.trim()) {
-                // Prevent form submission
-                event.preventDefault();
-
-                // Alert the user
-                alert("Comment cannot be empty. Please write something before submitting.");
-
-                // Focus on the textarea so the user can continue typing
-                textarea.focus();
-
-                // Return false to prevent form submission
-                return false;
-            }
-
-            // If the textarea is not empty, allow form submission
-            return true;
-        }
-    </script>
+    <script src="/static/js/utils.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/ui.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/main.js"></script>
 </body>
 
 </html>
