@@ -6,19 +6,19 @@ const api = {
     async fetch(url, options = {}) {
         try {
             const response = await fetch(url, options);
-            
+
             // Check for authentication errors
             if (response.status === 401) {
                 window.location.href = '/login';
                 throw new Error('Authentication required');
             }
-            
+
             // Check for successful response
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(errorText || `HTTP Error ${response.status}`);
             }
-            
+
             // Parse JSON response
             return await response.json();
         } catch (error) {
@@ -55,13 +55,26 @@ const api = {
         formData.append('post_id', postId);
         formData.append('is_like', isLike);
 
-        return await this.fetch('/like', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData
-        });
+        try {
+            const data = await this.fetch('/like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+
+            // Assuming data.reactions contains the updated reaction data
+            if (data.success) {
+                // Return the reactions data to update the UI
+                return data.reactions;
+            } else {
+                throw new Error('Failed to toggle like on the post');
+            }
+        } catch (error) {
+            console.error('Failed to toggle like on post:', error);
+            throw error;
+        }
     },
 
     /**
@@ -72,12 +85,25 @@ const api = {
         formData.append('comment_id', commentId);
         formData.append('is_like', isLike);
 
-        return await this.fetch('/comment/like', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: formData
-        });
-    }
+        try {
+            const data = await this.fetch('/comment/like', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            });
+
+            // Assuming data.reactions contains the updated reaction data
+            if (data.success) {
+                // Return the reactions data to update the UI
+                return data.reactions;
+            } else {
+                throw new Error('Failed to toggle like on the post');
+            }
+        } catch (error) {
+            console.error('Failed to toggle like on post:', error);
+            throw error;
+        }
+    },
 };
