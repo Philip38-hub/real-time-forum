@@ -1,0 +1,151 @@
+class Api {
+    constructor() {
+        this.baseUrl = ''; // Same origin for API calls
+    }
+
+    async request(endpoint, options = {}) {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        const config = {
+            ...options,
+            headers,
+            credentials: 'include' // Include cookies for session management
+        };
+
+        try {
+            const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+            
+            // Handle 401 Unauthorized
+            if (response.status === 401) {
+                store.setUser(null);
+                router.navigate('/login', true);
+                throw new Error('Unauthorized');
+            }
+
+            // Handle non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'API request failed');
+                }
+                return data;
+            }
+
+            if (!response.ok) {
+                throw new Error('API request failed');
+            }
+
+            return response;
+        } catch (error) {
+            console.error('API Error:', error);
+            throw error;
+        }
+    }
+
+    // Authentication endpoints
+    async login(email, password) {
+        const response = await this.request('/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+        store.setUser(response.user);
+        return response;
+    }
+
+    async register(username, email, password, age, gender) {
+        const response = await this.request('/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, email, password, age, gender })
+        });
+        return response;
+    }
+
+    async logout() {
+        await this.request('/logout', { method: 'POST' });
+        store.setUser(null);
+    }
+
+    // Post endpoints
+    async getPosts() {
+        const response = await this.request('/');
+        return response.posts;
+    }
+
+    async getPostsByCategory(category) {
+        const response = await this.request(`/filter?category=${encodeURIComponent(category)}`);
+        return response.posts;
+    }
+
+    async createPost(formData) {
+        const response = await this.request('/post', {
+            method: 'POST',
+            headers: {}, // Let browser set correct content-type for FormData
+            body: formData
+        });
+        return response;
+    }
+
+    // Like/Dislike endpoints
+    async togglePostLike(postId, isLike) {
+        const response = await this.request('/like', {
+            method: 'POST',
+            body: JSON.stringify({ post_id: postId, is_like: isLike })
+        });
+        return response;
+    }
+
+    async toggleCommentLike(commentId, isLike) {
+        const response = await this.request('/comment/like', {
+            method: 'POST',
+            body: JSON.stringify({ comment_id: commentId, is_like: isLike })
+        });
+        return response;
+    }
+
+    // Comment endpoints
+    async createComment(postId, content, parentId = null) {
+        const response = await this.request('/comment', {
+            method: 'POST',
+            body: JSON.stringify({
+                post_id: postId,
+                content,
+                parent_id: parentId
+            })
+        });
+        return response;
+    }
+
+    // Profile endpoints
+    async getProfile() {
+        const response = await this.request('/profile');
+        return response;
+    }
+
+    // Session check
+    async checkSession() {
+        try {
+            const response = await this.request('/profile');
+            store.setUser(response.user);
+            return true;
+        } catch (error) {
+            store.setUser(null);
+            return false;
+        }
+    }
+
+    // OAuth endpoints
+    async githubLogin() {
+        window.location.href = '/auth/github';
+    }
+
+    async googleLogin() {
+        window.location.href = '/auth/google';
+    }
+}
+
+// Create and export a single API instance
+const api = new Api();
