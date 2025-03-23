@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-type LikeResponse struct {
-	Success      bool `json:"success"`
-	LikeCount    int  `json:"like_count"`
-	DislikeCount int  `json:"dislike_count"`
-}
-
 func LikeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -50,9 +44,24 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	postID := r.FormValue("post_id")
+	commentID := r.FormValue("comment_id")
 	isLike, err := strconv.ParseBool(r.FormValue("is_like"))
 	if err != nil {
 		http.Error(w, "Invalid like/dislike value", http.StatusBadRequest)
+		return
+	}
+
+	// Determine whether this is a post or comment
+	var targetID string
+	var targetType string
+	if postID != "" {
+		targetID = postID
+		targetType = "post"
+	} else if commentID != "" {
+		targetID = commentID
+		targetType = "comment"
+	} else {
+		http.Error(w, "Post or Comment ID is required", http.StatusBadRequest)
 		return
 	}
 
@@ -96,23 +105,50 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get the updated like and dislike counts
 	var likeCount, dislikeCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM likes WHERE post_id = ? AND is_like = 1", postID).Scan(&likeCount)
+	var queryCount string
+	if targetType == "post" {
+		queryCount = "SELECT COUNT(*) FROM likes WHERE post_id = ? AND is_like = 1"
+	} else if targetType == "comment" {
+		queryCount = "SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 1"
+	}
+
+	err = db.QueryRow(queryCount, targetID).Scan(&likeCount)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-	err = db.QueryRow("SELECT COUNT(*) FROM likes WHERE post_id = ? AND is_like = 0", postID).Scan(&dislikeCount)
+	err = db.QueryRow("SELECT COUNT(*) FROM likes WHERE post_id = ? AND is_like = 0", targetID).Scan(&dislikeCount)
+	if targetType == "comment" {
+		err = db.QueryRow("SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 0", targetID).Scan(&dislikeCount)
+	}
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	// Return the updated counts
-	response := LikeResponse{
-		Success:      true,
-		LikeCount:    likeCount,
-		DislikeCount: dislikeCount,
+	// Construct the reaction data to send
+	reactionData := map[string]interface{}{
+		"target_id":     targetID,
+		"target_type":   targetType,
+		"like_count":    likeCount,
+		"dislike_count": dislikeCount,
+		"user_liked":    isLike, // Whether the user has liked this post/comment
 	}
+
+	var messageType string
+	if targetType == "post" {
+		messageType = "postLikeUpdate"
+	} else {
+		messageType = "commentLikeUpdate"
+	}
+
+	// Broadcast the reaction update to all connected clients
+	BroadcastMessage(messageType, reactionData)
+
+	// Return a success response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"reactions": reactionData,
+	})
 }
