@@ -33,6 +33,11 @@ class Router {
     navigate(url, replace = false) {
         const path = new URL(url, window.location.origin).pathname;
         
+        // Prevent recursive navigation to the same path
+        if (path === window.location.pathname) {
+            return;
+        }
+        
         // Update browser history
         if (replace) {
             window.history.replaceState(null, '', path);
@@ -56,7 +61,11 @@ class Router {
 
         // Check authentication if required
         if (route.authRequired && !store.state.user) {
-            this.navigate('/login', true);
+            window.history.replaceState(null, '', '/login');
+            const loginRoute = this.routes.find(r => r.pattern.test('/login'));
+            if (loginRoute) {
+                await loginRoute.handler();
+            }
             return;
         }
 
@@ -90,7 +99,7 @@ class Router {
             } finally {
                 store.setLoading(false);
             }
-        });
+        }, { authRequired: false });
 
         // Login page
         this.addRoute('/login', () => {
@@ -98,8 +107,9 @@ class Router {
                 this.navigate('/', true);
                 return;
             }
-            new LoginForm().render();
-        });
+            const loginForm = new LoginForm();
+            loginForm.render();
+        }, { authRequired: false });
 
         // Register page
         this.addRoute('/register', () => {
@@ -107,8 +117,9 @@ class Router {
                 this.navigate('/', true);
                 return;
             }
-            new RegisterForm().render();
-        });
+            const registerForm = new RegisterForm();
+            registerForm.render();
+        }, { authRequired: false });
 
         // Profile page
         this.addRoute('/profile', () => {
@@ -116,7 +127,8 @@ class Router {
                 this.navigate('/login', true);
                 return;
             }
-            new Profile().render();
+            const profile = new Profile();
+            profile.render();
         }, { authRequired: true });
 
         // Category filter
@@ -139,10 +151,9 @@ class Router {
             } finally {
                 store.setLoading(false);
             }
-        });
-
-        // Handle initial route
-        this.handleRoute();
+        }, { authRequired: false });
+        
+        // Routes are now initialized but handleRoute() will be called by App
     }
 }
 

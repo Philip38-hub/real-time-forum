@@ -37,6 +37,12 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+    // Serve SPA for root path
+    if r.URL.Path == "/" {
+        http.ServeFile(w, r, "static/index.html")
+        return
+    }
+    
     // API endpoints
     if isAPIEndpoint(r.URL.Path) {
         handleAPI(w, r)
@@ -49,6 +55,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func isAPIEndpoint(path string) bool {
     apiPaths := []string{
+        "/api/posts",
         "/login",
         "/register",
         "/like",
@@ -76,7 +83,7 @@ func isAPIEndpoint(path string) bool {
 
 func handleAPI(w http.ResponseWriter, r *http.Request) {
     switch r.URL.Path {
-    case "/":
+    case "/api/posts":
         handlers.HomeHandler(w, r)
     case "/login":
         handlers.LoginHandler(w, r)

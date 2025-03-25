@@ -22,7 +22,6 @@ class Sidebar {
         const activeCategory = this.getActiveCategory();
         
         this.container.innerHTML = `
-            <aside class="sidebar" id="sidebar">
                 <h3>Categories</h3>
                 <ul>
                     <li>
@@ -39,7 +38,6 @@ class Sidebar {
                         </li>
                     `).join('')}
                 </ul>
-            </aside>
         `;
 
         // Add click event listeners

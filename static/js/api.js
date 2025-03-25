@@ -4,41 +4,45 @@ class Api {
     }
 
     async request(endpoint, options = {}) {
-        const headers = {
-            'Content-Type': 'application/json',
-            ...options.headers
-        };
-
         const config = {
             ...options,
-            headers,
-            credentials: 'include' // Include cookies for session management
+            headers: {
+                'Accept': 'application/json',
+                ...options.headers
+            },
+            credentials: 'include'
         };
+
+        // Add Content-Type only if not FormData
+        if (!(options.body instanceof FormData)) {
+            config.headers['Content-Type'] = 'application/json';
+        }
 
         try {
             const response = await fetch(`${this.baseUrl}${endpoint}`, config);
             
-            // Handle 401 Unauthorized
-            if (response.status === 401) {
-                store.setUser(null);
-                router.navigate('/login', true);
-                throw new Error('Unauthorized');
-            }
-
-            // Handle non-JSON responses
+            // For JSON responses, parse and check for errors
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
                 const data = await response.json();
+                
+                // Handle unauthorized without redirect
+                if (response.status === 401) {
+                    store.setUser(null);
+                }
+                
                 if (!response.ok) {
                     throw new Error(data.error || 'API request failed');
                 }
+                
                 return data;
             }
-
+            
+            // For non-JSON responses
             if (!response.ok) {
                 throw new Error('API request failed');
             }
-
+            
             return response;
         } catch (error) {
             console.error('API Error:', error);
@@ -71,7 +75,7 @@ class Api {
 
     // Post endpoints
     async getPosts() {
-        const response = await this.request('/');
+        const response = await this.request('/api/posts');
         return response.posts;
     }
 
@@ -127,14 +131,22 @@ class Api {
 
     // Session check
     async checkSession() {
-        try {
-            const response = await this.request('/profile');
-            store.setUser(response.user);
-            return true;
-        } catch (error) {
-            store.setUser(null);
-            return false;
-        }
+        store.setUser(null);
+        return new Promise(resolve => {
+            // Do a minimal check of session state
+            fetch('/api/posts', {
+                method: 'HEAD',
+                credentials: 'include'
+            })
+            .then(response => {
+                // If we get any response, consider it a success
+                // The actual auth state will be handled by individual routes
+                resolve(true);
+            })
+            .catch(() => {
+                resolve(false);
+            });
+        });
     }
 
     // OAuth endpoints
