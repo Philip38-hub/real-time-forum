@@ -103,6 +103,24 @@ func InitDB() {
         FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
         UNIQUE(user_id, comment_id)
     );
+
+    CREATE TABLE IF NOT EXISTS private_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sender_id TEXT NOT NULL,       -- UUID of the sender
+        receiver_id TEXT NOT NULL,     -- UUID of the receiver
+        content TEXT NOT NULL,         -- Message content
+        timestamp DATETIME NOT NULL,   -- Timestamp of the message
+        is_read BOOLEAN DEFAULT FALSE, -- Whether the message has been read
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    -- Index for faster queries on sender and receiver
+    CREATE INDEX IF NOT EXISTS idx_private_messages_sender 
+        ON private_messages(sender_id);
+
+    CREATE INDEX IF NOT EXISTS idx_private_messages_receiver 
+        ON private_messages(receiver_id);
     `
 	_, err = db.Exec(createTable)
 	if err != nil {
