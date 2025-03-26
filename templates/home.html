@@ -5,12 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <title>Forum - Posts</title>
 </head>
 
 <body>
+
     <header>
         <div class="hamburger" id="menu-toggle">
             <i class="fas fa-bars"></i>
@@ -211,13 +213,119 @@
                 <p>No posts available.</p>
                 {{end}}
             </div>
+            <!-- Private message section -->
+            <div class="chat-container hidden" id="chat-container">
+                <div class="chat-sidebar">
+                    <h3>Messages</h3>
+                    <div class="online-users-header">
+                        <h4>Online Users</h4>
+                        <button id="minimize-chat" class="minimize-btn">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                    <div class="user-search">
+                        <input type="text" id="user-search" placeholder="Search users...">
+                    </div>
+                    <ul id="users-list" class="users-list">
+                        <!-- Users will be populated here via JavaScript -->
+                    </ul>
+                </div>
+                <div class="chat-main hidden" id="chat-main">
+                    <div class="chat-header">
+                        <div class="chat-header-info">
+                            <h4 id="chat-user-name">User Name</h4>
+                            <span id="chat-user-status" class="user-status">online</span>
+                        </div>
+                        <button id="close-chat" class="close-btn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages will be populated here via JavaScript -->
+                    </div>
+                    <div class="chat-form-container">
+                        <form id="chat-form">
+                            <input id="chat-input" type="text" placeholder="Type a message..." required
+                                autocomplete="off" />
+                            <button class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat toggle button - should be always visible -->
+            <div class="chat-toggle" id="chat-toggle">
+                <i class="fas fa-comments"></i>
+                <span class="unread-count hidden" id="unread-count">0</span>
+            </div>
         </main>
     </div>
+    {{if .IsLoggedIn}}
+    <script>
+        // Initialize user data as soon as possible
+        (function () {
+            const userId = "{{.UserID}}";
+            const username = "{{.Username}}";
+            if (userId && username) {
+                localStorage.setItem('userId', userId);
+                localStorage.setItem('username', username);
+                console.log('User data initialized:', {
+                    userId: localStorage.getItem('userId'),
+                    username: localStorage.getItem('username')
+                });
+            }
+        })();
+    </script>
+    {{end}}
+
+    <script>
+
+        document.getElementById('login-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new URLSearchParams({
+                    'email': email,
+                    'password': password
+                })
+            })
+                .then(response => {
+                    console.error('Full response:', response);
+                    console.error('Response status:', response.status);
+                    console.error('Response headers:', response.headers);
+                    return response.text(); // Change to text to see raw response
+                })
+                .then(text => {
+                    console.error('Raw response text:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (parseError) {
+                        console.error('JSON parse error:', parseError);
+                        throw new Error('Invalid response');
+                    }
+                })
+                .catch(error => {
+                    console.error('Complete login error:', error);
+                    alert('Login failed: ' + error.message);
+                });
+        });
+    </script>
 
     <script src="/static/js/utils.js"></script>
     <script src="/static/js/api.js"></script>
     <script src="/static/js/ui.js"></script>
     <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/chat.js"></script>
     <script src="/static/js/main.js"></script>
 </body>
 
