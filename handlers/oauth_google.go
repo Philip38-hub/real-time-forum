@@ -179,7 +179,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// Create new user for registration
 	        userID = uuid.New().String()
 	        _, err = db.Exec(`
-	            INSERT INTO users (id, email, username, google_id, avatar_url)
+	            INSERT INTO users (id, email, nickname, google_id, avatar_url)
 	            VALUES (?, ?, ?, ?, ?)`,
 	            userID, userInfo.Email, userInfo.Name, userInfo.Id, userInfo.Picture)
 	        if err != nil {

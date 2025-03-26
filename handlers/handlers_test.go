@@ -227,7 +227,7 @@ func TestGetCommentsForPost(t *testing.T) {
 	_, err = mockDB.Exec(`
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY,
-			username TEXT
+			nickname TEXT
 		);
 		CREATE TABLE posts (
 			id INTEGER PRIMARY KEY,
@@ -250,7 +250,7 @@ func TestGetCommentsForPost(t *testing.T) {
 		);
 
 		-- Insert test users
-		INSERT INTO users (id, username) VALUES 
+		INSERT INTO users (id, nickname) VALUES 
 		(1, 'testuser1'),
 		(2, 'testuser2');
 
@@ -373,7 +373,7 @@ func TestGetCommentReplies(t *testing.T) {
 	_, err = mockDB.Exec(`
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY,
-			username TEXT
+			nickname TEXT
 		);
 		CREATE TABLE posts (
 			id INTEGER PRIMARY KEY,
@@ -396,7 +396,7 @@ func TestGetCommentReplies(t *testing.T) {
 		);
 
 		-- Insert test users
-		INSERT INTO users (id, username) VALUES 
+		INSERT INTO users (id, nickname) VALUES 
 		(1, 'testuser1'),
 		(2, 'testuser2');
 
@@ -501,7 +501,7 @@ func TestCommentHandler(t *testing.T) {
 	_, err = mockDB.Exec(`
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY,
-			username TEXT
+			nickname TEXT
 		);
 		CREATE TABLE posts (
 			id INTEGER PRIMARY KEY,
@@ -520,7 +520,7 @@ func TestCommentHandler(t *testing.T) {
 		);
 
 		-- Insert test users
-		INSERT INTO users (id, username) VALUES 
+		INSERT INTO users (id, nickname) VALUES 
 		(1, 'testuser1'),
 		(2, 'testuser2');
 
@@ -662,7 +662,7 @@ func TestCommentLikeHandler(t *testing.T) {
 	_, err = mockDB.Exec(`
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY,
-			username TEXT
+			nickname TEXT
 		);
 		CREATE TABLE posts (
 			id INTEGER PRIMARY KEY,
@@ -687,7 +687,7 @@ func TestCommentLikeHandler(t *testing.T) {
 		);
 
 		-- Insert test users
-		INSERT INTO users (id, username) VALUES 
+		INSERT INTO users (id, nickname) VALUES 
 		(1, 'testuser1'),
 		(2, 'testuser2');
 

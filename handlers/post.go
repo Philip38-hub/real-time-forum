@@ -124,7 +124,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get username for the new post
 	var username string
-	err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&username)
+	err = db.QueryRow("SELECT nickname FROM users WHERE id = ?", userID).Scan(&username)
 	if err != nil {
 		log.Printf("Error retrieving username: %v", err)
 		username = "Unknown User"

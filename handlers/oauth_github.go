@@ -207,7 +207,7 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 			}
 			
 			_, err = db.Exec(`
-			INSERT INTO users (id, email, username, github_id, avatar_url)
+			INSERT INTO users (id, email, nickname, github_id, avatar_url)
 			VALUES (?, ?, ?, ?, ?)`,
 			userID, githubUser.Email, username, githubUser.ID, githubUser.AvatarURL)
 			if err != nil {
@@ -232,14 +232,14 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 
 			// Get current username
 			var currentUsername string
-			err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&currentUsername)
+			err = db.QueryRow("SELECT nickname FROM users WHERE id = ?", userID).Scan(&currentUsername)
 			if err == nil && currentUsername == "" {
 			    // Username is empty, update it with GitHub username
 			    username := githubUser.Name
 			    if username == "" {
 			        username = githubUser.Login
 			    }
-			    _, err = db.Exec("UPDATE users SET github_id = ?, username = ? WHERE id = ?", githubUser.ID, username, userID)
+			    _, err = db.Exec("UPDATE users SET github_id = ?, nickname = ? WHERE id = ?", githubUser.ID, username, userID)
 			} else {
 			    // Just update GitHub ID
 			    _, err = db.Exec("UPDATE users SET github_id = ? WHERE id = ?", githubUser.ID, userID)

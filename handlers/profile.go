@@ -21,7 +21,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 			p.content, 
 			p.image_path,
 			GROUP_CONCAT(DISTINCT pc.category) as categories, 
-			u.username, 
+			u.nickname, 
 			p.created_at,
 			(SELECT COUNT(*) FROM likes WHERE post_id = p.id AND is_like = 1) as like_count,
 			(SELECT COUNT(*) FROM likes WHERE post_id = p.id AND is_like = 0) as dislike_count
@@ -69,7 +69,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 			p.content,
 			p.image_path, 
 			GROUP_CONCAT(DISTINCT pc.category) as categories, 
-			u.username, 
+			u.nickname, 
 			p.created_at,
 			(SELECT COUNT(*) FROM likes WHERE post_id = p.id AND is_like = 1) as like_count,
 			(SELECT COUNT(*) FROM likes WHERE post_id = p.id AND is_like = 0) as dislike_count
@@ -113,7 +113,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user information
 	var username string
 	var email string
-	err = db.QueryRow("SELECT username, email FROM users WHERE id = ?", userID).Scan(&username, &email)
+	err = db.QueryRow("SELECT nickname, email FROM users WHERE id = ?", userID).Scan(&username, &email)
 	if err != nil {
 		log.Printf("Error fetching user info: %v", err)
 		RenderError(w, r, "Error fetching user information", http.StatusInternalServerError)

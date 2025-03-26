@@ -76,7 +76,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 	// Query to fetch posts based on the selected category
 	query := `
 		SELECT p.id, p.title, p.content, p.image_path, GROUP_CONCAT(pc.category) as categories, 
-		u.username, p.created_at, 
+		u.nickname, p.created_at, 
 		COALESCE(l.like_count, 0) AS like_count,
 		COALESCE(l.dislike_count, 0) AS dislike_count
 		FROM posts p
@@ -93,7 +93,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 	if category != "all" && category != "" {
 		query += " WHERE pc.category = ?"
 	}
-	query += " GROUP BY p.id, p.title, p.content, u.username, p.created_at ORDER BY p.created_at DESC"
+	query += " GROUP BY p.id, p.title, p.content, u.nickname, p.created_at ORDER BY p.created_at DESC"
 
 	// Execute the query
 	var rows *sql.Rows
@@ -127,7 +127,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		commentQuery := `
-			SELECT c.id, c.content, u.username, c.created_at, 
+			SELECT c.id, c.content, u.nickname, c.created_at, 
        COALESCE(clike.like_count, 0) AS like_count,
        COALESCE(cdislike.dislike_count, 0) AS dislike_count
 FROM comments c

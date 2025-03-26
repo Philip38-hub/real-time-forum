@@ -101,7 +101,7 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get username for the new post
 	var username string
-	err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&username)
+	err = db.QueryRow("SELECT nickname FROM users WHERE id = ?", userID).Scan(&username)
 	if err != nil {
 		log.Printf("Error retrieving username: %v", err)
 		username = "Unknown User"
@@ -148,7 +148,7 @@ var GetCommentsForPost = func(postID int) ([]Comment, error) {
 			c.user_id,
 			c.content,
 			c.created_at,
-			u.username,
+			u.nickname,
 			c.parent_id,
 			(SELECT COUNT(*) FROM comments r WHERE r.parent_id = c.id) as reply_count,
 			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,
@@ -204,7 +204,7 @@ var GetCommentReplies = func(commentID int) ([]Comment, error) {
 			c.user_id,
 			c.content,
 			c.created_at,
-			u.username,
+			u.nickname,
 			c.parent_id,
 			0 as reply_count,
 			(SELECT COUNT(*) FROM comment_likes cl WHERE cl.comment_id = c.id AND cl.is_like = 1) as like_count,

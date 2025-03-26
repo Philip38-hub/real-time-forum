@@ -21,7 +21,7 @@ func InitDB() {
     CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,  -- UUID as TEXT
         email TEXT UNIQUE,
-        username TEXT,
+        nickname TEXT,
         password TEXT,
         google_id TEXT,      -- Google's unique user ID
         github_id TEXT,      -- GitHub's unique user ID

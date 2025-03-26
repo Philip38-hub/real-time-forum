@@ -42,9 +42,9 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var existingUsername string
-		err := db.QueryRow("SELECT username FROM users WHERE username = ?", username).Scan(&existingUsername)
+		err := db.QueryRow("SELECT nickname FROM users WHERE nickname = ?", username).Scan(&existingUsername)
 		if err == nil {
-			RenderError(w, r, "Username already taken", http.StatusBadRequest)
+			RenderError(w, r, "Nickname already taken", http.StatusBadRequest)
 			return
 		}
 
@@ -92,7 +92,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		userID := uuid.New().String()
 
 		// Create user
-		_, err = db.Exec("INSERT INTO users (id, email, username, password) VALUES (?, ?, ?, ?)", userID, email, username, hashedPassword)
+		_, err = db.Exec("INSERT INTO users (id, email, nickname, password) VALUES (?, ?, ?, ?)", userID, email, username, hashedPassword)
 		if err != nil {
 			log.Printf("Error creating user: %v", err)
 			RenderError(w, r, "database_error", http.StatusInternalServerError)
