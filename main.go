@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"forum/handlers"
 )
@@ -35,6 +36,28 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received request: %s %s", r.Method, r.URL.Path)
+
+	// Check if the request matches the "/api/messages" prefix
+	if strings.HasPrefix(r.URL.Path, "/api/messages/") {
+		// Get the part after "/api/messages/"
+		remainingPath := strings.TrimPrefix(r.URL.Path, "/api/messages/")
+
+		// Handle specific cases based on the remaining path
+		switch remainingPath {
+		case "send":
+			handlers.SendMessageHandler(w, r)
+		case "users":
+			handlers.GetUsersHandler(w, r)
+		case "mark-read":
+			handlers.MarkMessageAsReadHandler(w, r)
+		default:
+			// Handle "/api/messages/{userId}" case
+			handlers.GetMessagesHandler(w, r)
+		}
+		return
+	}
+
 	switch r.URL.Path {
 	case "/":
 		handlers.HomeHandler(w, r)
@@ -69,6 +92,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		handlers.HandleGithubLogin(w, r)
 	case "/auth/github/callback":
 		handlers.HandleGithubCallback(w, r)
+	// 	// Private messaging routes
+	// case "/api/messages/":
+	// 	handlers.GetMessagesHandler(w, r)
+	// case "/api/messages/send":
+	// 	handlers.SendMessageHandler(w, r)
+	// case "/api/messages/users":
+	// 	handlers.GetUsersHandler(w, r)
+	// case "/api/messages/mark-read":
+	// 	handlers.MarkMessageAsReadHandler(w, r)
 	default:
 		handlers.RenderError(w, r, "Page not found", http.StatusNotFound)
 	}
