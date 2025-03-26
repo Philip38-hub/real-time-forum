@@ -232,5 +232,45 @@ const UI = {
                 textarea.value = '';
             });
         }
-    }
+    },
+
+    // Add a new message to the chat
+    addNewMessage(message) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+        messageElement.innerHTML = `
+            <div class="message-content">${message.content}</div>
+            <div class="message-timestamp">${new Date(message.timestamp).toLocaleTimeString()}</div>
+        `;
+        chatMessages.appendChild(messageElement);
+
+        // Scroll to bottom
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    },
+
+     // Show typing indicator
+    showTypingIndicator(data) {
+        const typingIndicator = document.getElementById('typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.textContent = data.isTyping ? `${data.senderName} is typing...` : '';
+        }
+    },
+
+    // Mark a message as read
+    markMessageAsRead(data) {
+        const messageElement = document.querySelector(`[data-message-id='${data.messageId}']`);
+        if (messageElement) {
+            messageElement.classList.add('read');
+        }
+    },
+
+    // Update user status (online/offline)
+    updateUserStatus(data) {
+        const userElement = document.querySelector(`[data-user-id='${data.userId}']`);
+        if (userElement) {
+            userElement.classList.toggle('online', data.isOnline);
+        }
+    },
+
 };
