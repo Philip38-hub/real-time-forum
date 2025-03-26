@@ -106,4 +106,57 @@ const api = {
             throw error;
         }
     },
+    
+    /*       Fetch all users     */
+    async fetchUsers() {
+        return await this.fetch('/api/messages/users');
+    },
+
+    /*       Fetch messages with a specific user     */
+    async fetchMessages(userId, page = 1, limit = 10) {
+        return await this.fetch(`/api/messages/${userId}?page=${page}&limit=${limit}`);
+    },
+
+    /*     Send a message to a user      */
+    async sendMessage(userId, content) {
+        return await this.fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                receiver_id: userId,
+                content: content
+            })
+        });
+    },
+
+    /*     Register a new user      */
+    async register(userData) {
+        return await this.fetch('/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(userData)
+        });
+    },
+
+    /*      Login user      */
+    async login(credentials) {
+        return await this.fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(credentials)
+        });
+    },
+
+    /*     Logout user     */
+    async logout() {
+        return await this.fetch('/logout', {
+            method: 'POST'
+        });
+    }
 };
