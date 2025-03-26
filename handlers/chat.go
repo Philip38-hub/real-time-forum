@@ -28,8 +28,8 @@ type MessageResponse struct {
 // GetUsersHandler returns a list of all users
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
-	userId, err := GetSession(w, r)
-	if err != nil || userId == "" {
+	session, err := GetSession(r)
+	if err != nil || session.UserID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -43,7 +43,7 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get unread counts for current user
-	unreadCounts, err := GetUnreadMessageCount(userId)
+	unreadCounts, err := GetUnreadMessageCount(session.UserID)
 	if err != nil {
 		log.Printf("Error getting unread counts: %v", err)
 	}
@@ -71,8 +71,8 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 // GetMessagesHandler returns messages between current user and another user
 func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
-	userId, err := GetSession(w, r)
-	if err != nil || userId == "" {
+	session, err := GetSession(r)
+	if err != nil || session.UserID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -105,7 +105,7 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get messages
-	messages, err := GetMessages(userId, path, page, limit)
+	messages, err := GetMessages(session.UserID, path, page, limit)
 	if err != nil {
 		log.Printf("Error getting messages: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
@@ -125,8 +125,8 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 // SendMessageHandler handles message sending via HTTP (as fallback if WebSocket fails)
 func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
-	userId, err := GetSession(w, r)
-	if err != nil || userId == "" {
+	session, err := GetSession(r)
+	if err != nil || session.UserID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -151,9 +151,18 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get sender's username
+	senderName, err := GetUsernameById(session.UserID)
+	if err != nil {
+		log.Printf("Error getting sender username: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
 	// Create message
 	message := PrivateMessage{
-		SenderId:   userId,
+		SenderId:   session.UserID,
+		Sender:     senderName,
 		ReceiverId: msgRequest.ReceiverId,
 		Content:    msgRequest.Content,
 		Timestamp:  time.Now(),
@@ -167,9 +176,22 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set message ID
+	message.ID = messageId
+
+	// Try to send via WebSocket if recipient is online
+	clientsMutex.Lock()
+	_, isOnline := userConns[msgRequest.ReceiverId]
+	clientsMutex.Unlock()
+
+	if isOnline {
+		go SendToUser(msgRequest.ReceiverId, "private_message", message)
+	}
+
 	// Send response
 	response := MessageResponse{
 		Success:   true,
+		Message:   "Message sent",
 		MessageId: messageId,
 	}
 
@@ -180,8 +202,8 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 // MarkMessageAsReadHandler marks a message as read
 func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
-	userId, err := GetSession(w, r)
-	if err != nil || userId == "" {
+	session, err := GetSession(r)
+	if err != nil || session.UserID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -372,36 +394,52 @@ func GetUsers() ([]map[string]interface{}, error) {
 	return users, nil
 }
 
-// GetUserIdFromSession retrieves the user ID from the session cookie
-func GetSession(w http.ResponseWriter, r *http.Request) (string, error) {
-	// Get session cookie from request
-	sessionCookie, err := r.Cookie("session_id")
-	if err != nil {
-		// No cookie or invalid cookie
-		return "", nil // Return empty string with no error, user is not logged in
-	}
+// // GetUserIdFromSession retrieves the user ID from the session cookie
+// func GetUserIdFromSession(w http.ResponseWriter, r *http.Request) (string, error) {
+// 	// Get session cookie from request
+// 	sessionCookie, err := r.Cookie("session_id")
+// 	if err != nil {
+// 		// No cookie or invalid cookie
+// 		return "", nil // Return empty string with no error, user is not logged in
+// 	}
 
-	// Query to retrieve user_id based on session_id
-	var userID string
-	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
-	if err == sql.ErrNoRows {
-		// Session is invalid, clear the cookie
-		http.SetCookie(w, &http.Cookie{
-			Name:     "session_id",
-			Value:    "",
-			Path:     "/",
-			Expires:  time.Unix(0, 0), // Expire the cookie immediately
-			MaxAge:   -1,
-			HttpOnly: true,
-			Secure:   true, // Ensure it works only over HTTPS
-		})
-		return "", nil // No valid session, user is not logged in
-	} else if err != nil {
-		// Database error
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return "", err
-	}
+// 	// Query to retrieve user_id based on session_id
+// 	var userID string
+// 	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
+// 	if err == sql.ErrNoRows {
+// 		// Session is invalid, clear the cookie
+// 		http.SetCookie(w, &http.Cookie{
+// 			Name:     "session_id",
+// 			Value:    "",
+// 			Path:     "/",
+// 			Expires:  time.Unix(0, 0), // Expire the cookie immediately
+// 			MaxAge:   -1,
+// 			HttpOnly: true,
+// 			Secure:   true, // Ensure it works only over HTTPS
+// 		})
+// 		return "", nil // No valid session, user is not logged in
+// 	} else if err != nil {
+// 		// Database error
+// 		http.Error(w, "Database error", http.StatusInternalServerError)
+// 		return "", err
+// 	}
 
-	// Return user ID if session is valid
-	return userID, nil
-}
+// 	// Return user ID if session is valid
+// 	return userID, nil
+// }
+
+// func GetSession(r *http.Request) (*Session, error) {
+//     cookie, err := r.Cookie("session_token")
+//     if err != nil {
+//         log.Printf("Session cookie error: %v", err)
+//         return nil, err
+//     }
+
+//     session, err := ValidateSessionToken(cookie.Value)
+//     if err != nil {
+//         log.Printf("Session validation error: %v", err)
+//         return nil, err
+//     }
+
+//     return session, nil
+// }
