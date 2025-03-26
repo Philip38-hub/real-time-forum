@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 )
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Add this at the very start
+	log.Println("LoginHandler called. Method:", r.Method)
+	log.Println("Request headers:", r.Header)
 	if r.Method == http.MethodGet {
 		// Show login form
 		tmpl, err := template.ParseFiles("templates/login.html")
@@ -31,18 +35,30 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
+		// Check if the request wants JSON response
+		// Modify your wantsJSON check
+		wantsJSON := r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+		log.Printf("Wants JSON: %v, Content-Type: %s", wantsJSON, r.Header.Get("Content-Type"))
 		email := r.FormValue("email")
 		password := r.FormValue("password")
 
 		if email == "" || password == "" {
-			RenderError(w, r, "invalid_input", http.StatusBadRequest)
+			if wantsJSON {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"success": false,
+					"error":   "Invalid input",
+				})
+			} else {
+				RenderError(w, r, "invalid_input", http.StatusBadRequest)
+			}
 			return
 		}
 
 		// Get user from database
 		var user User
 		var hashedPassword string
-		err := db.QueryRow("SELECT id, email, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &hashedPassword)
+		err := db.QueryRow("SELECT id, email, nickname, password FROM users WHERE email = ?", email).Scan(&user.ID, &user.Email, &user.Username, &hashedPassword)
 		if err == sql.ErrNoRows {
 			RenderError(w, r, "invalid_credentials", http.StatusUnauthorized)
 			return
@@ -76,7 +92,15 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		_, err = db.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, user.ID)
 		if err != nil {
 			log.Printf("Error creating session: %v", err)
-			RenderError(w, r, "database_error", http.StatusInternalServerError)
+			if wantsJSON {
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"success": false,
+					"error":   "Database error",
+				})
+			} else {
+				RenderError(w, r, "database_error", http.StatusInternalServerError)
+			}
 			return
 		}
 
@@ -89,9 +113,22 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,
 		})
 
-		// Redirect to home page
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		if wantsJSON {
+			// Send JSON response for API calls
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success":    true,
+				"session_id": sessionID,
+				"user_id":    user.ID,
+				"username":   user.Username,
+			})
+			log.Printf("Sending login response: UserID=%s, Username=%s", user.ID, user.Username)
+		} else {
+			// Redirect for regular form submissions
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		}
 		return
+
 	}
 
 	RenderError(w, r, "invalid_input", http.StatusMethodNotAllowed)
