@@ -6,6 +6,7 @@ class ForumWebSocket {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.reconnectDelay = 1000; // Start with 1 second delay
+        this.messageHandlers = {};
     }
 
     // Initialize the WebSocket connection
@@ -19,51 +20,11 @@ class ForumWebSocket {
             this.scheduleReconnect();
         }
     }
-    connect() {
-        const userId = localStorage.getItem('userId');
-        const username = localStorage.getItem('username');
-
-        console.log('Connecting WebSocket with:', { userId, username }); // Debug log
-
-        if (!userId || !username) {
-            console.error('Missing user data for WebSocket connection');
-            return false;
-        }
-
-        this.socket = new WebSocket(`ws://${window.location.host}/ws`);
-        this.setupEventHandlers();
-        return true;
-    }
 
     // Set up WebSocket event handlers
     setupEventHandlers() {
         this.socket.onopen = () => {
-            console.log('WebSocket connected, sending auth...'); // Debug log
-
-            const userId = localStorage.getItem('userId');
-            const username = localStorage.getItem('username');
-
-            console.log('WebSocket connection attempt:', {
-                userId: userId,
-                username: username,
-                userIdType: typeof userId,
-                usernameType: typeof username
-            });
-
-            if (!userId || !username) {
-                console.error('Cannot establish WebSocket: Missing user data');
-                return false;
-            }
-
-            const authData = {
-                type: 'auth',
-                userId: userId,
-                username: username
-            };
-
-            console.log('Sending auth data:', authData); // Debug log
-            this.socket.send(JSON.stringify(authData));
-
+            logger.info('WebSocket connection established');
             this.connectionStatus = true;
             this.reconnectAttempts = 0;
             this.reconnectDelay = 1000;
@@ -90,8 +51,18 @@ class ForumWebSocket {
         };
     }
 
+    // Register message handlers for different message types
+    registerHandler(messageType, handler) {
+        this.messageHandlers[messageType] = handler;
+    }
+
     // Handle incoming WebSocket messages
     handleMessage(data) {
+        // Check if there's a registered handler for this message type
+        if (this.messageHandlers[data.type]) {
+            this.messageHandlers[data.type](data.content);
+            return;
+        }
 
         // Default handlers if no specific handler registered
         switch (data.type) {
