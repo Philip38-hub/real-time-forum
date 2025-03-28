@@ -262,64 +262,6 @@
             </div>
         </main>
     </div>
-    {{if .IsLoggedIn}}
-    <script>
-        // Initialize user data as soon as possible
-        (function () {
-            const userId = "{{.UserID}}";
-            const username = "{{.Username}}";
-            if (userId && username) {
-                localStorage.setItem('userId', userId);
-                localStorage.setItem('username', username);
-                console.log('User data initialized:', {
-                    userId: localStorage.getItem('userId'),
-                    username: localStorage.getItem('username')
-                });
-            }
-        })();
-    </script>
-    {{end}}
-
-    <script>
-
-        document.getElementById('login-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            fetch('/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: new URLSearchParams({
-                    'email': email,
-                    'password': password
-                })
-            })
-                .then(response => {
-                    console.error('Full response:', response);
-                    console.error('Response status:', response.status);
-                    console.error('Response headers:', response.headers);
-                    return response.text(); // Change to text to see raw response
-                })
-                .then(text => {
-                    console.error('Raw response text:', text);
-                    try {
-                        return JSON.parse(text);
-                    } catch (parseError) {
-                        console.error('JSON parse error:', parseError);
-                        throw new Error('Invalid response');
-                    }
-                })
-                .catch(error => {
-                    console.error('Complete login error:', error);
-                    alert('Login failed: ' + error.message);
-                });
-        });
-    </script>
 
     <script src="/static/js/utils.js"></script>
     <script src="/static/js/api.js"></script>
