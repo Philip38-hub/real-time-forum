@@ -181,7 +181,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Try to send via WebSocket if recipient is online
 	clientsMutex.Lock()
-	_, isOnline := userConns[msgRequest.ReceiverId]
+	_, isOnline := clients[msgRequest.ReceiverId]
 	clientsMutex.Unlock()
 
 	if isOnline {
@@ -375,7 +375,7 @@ func GetUsers() ([]map[string]interface{}, error) {
 
 		// Check if user is online
 		clientsMutex.Lock()
-		_, isOnline := userConns[id]
+		_, isOnline := clients[id]
 		clientsMutex.Unlock()
 
 		user := map[string]interface{}{
