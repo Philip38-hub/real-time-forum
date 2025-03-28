@@ -79,6 +79,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		handlers.LogoutHandler(w, r)
 	case "/profile":
 		handlers.ProfileHandler(w, r)
+	case "/api/current-user":
+		handlers.CurrentUserHandler(w, r)
 	// WebSocket endpoint
 	case "/ws":
 		handlers.WebSocketHandler(w, r)
