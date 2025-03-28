@@ -238,7 +238,7 @@ const UI = {
     addNewMessage(message) {
         const chatMessages = document.getElementById('chat-messages');
         const messageElement = document.createElement('div');
-        messageElement.className = `message ${message.senderId === currentUserId ? 'sent' : 'received'}`;
+        messageElement.className = `message ${message.senderId === this.currentUserId ? 'sent' : 'received'}`;
         messageElement.innerHTML = `
             <div class="message-content">${message.content}</div>
             <div class="message-timestamp">${new Date(message.timestamp).toLocaleTimeString()}</div>
