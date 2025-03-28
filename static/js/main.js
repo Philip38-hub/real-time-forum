@@ -4,9 +4,9 @@ const app = {
 
     // Initialize the application
     init() {
+        webSocketManager.init();
         Chat.init();
         this.attachEventListeners();
-        webSocketManager.init();
         logger.info('Forum application initialized');
     },
 
