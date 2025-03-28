@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -30,21 +31,31 @@ type WSMessage struct {
 	Content interface{} `json:"content"` // The actual data
 }
 
+// PrivateMessage represents a message sent between users
+type PrivateMessage struct {
+	ID         int64     `json:"id"`
+	SenderId   string    `json:"senderId"`
+	Sender     string    `json:"sender"` // Sender's username
+	ReceiverId string    `json:"receiverId"`
+	Content    string    `json:"content"`
+	Timestamp  time.Time `json:"timestamp"`
+}
+
 // WebSocketHandler handles WebSocket connections
 func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
-    if err != nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return
-    }
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
-    // Validate session
-    var userID string
-    err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", cookie.Value).Scan(&userID)
-    if err != nil {
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
-        return
-    }
+	// Validate session
+	var userID string
+	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", cookie.Value).Scan(&userID)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -54,25 +65,63 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Register the new client
+	// Register the new client with user ID
 	clientsMutex.Lock()
+	// Remove old connection if exists
+	if oldConn, exists := clients[userID]; exists {
+		delete(clients, userID)
+		if oldConn != conn {
+			oldConn.Close()
+		}
+	}
+
 	clients[userID] = conn
-	log.Printf("Client connected! Total clients: %d", len(clients))
+
+	log.Printf("User %s connected! Total users: %d", userID, len(clients))
 	clientsMutex.Unlock()
+
+	// Notify other users that this user is online
+	BroadcastUserStatus(userID, true)
 
 	// Remove client when connection closes
 	defer func() {
 		clientsMutex.Lock()
+		//	delete(clients, conn)
 		delete(clients, userID)
-		log.Printf("Client disconnected! Total clients: %d", len(clients))
+		log.Printf("User %s disconnected! Total users: %d", userID, len(clients))
 		clientsMutex.Unlock()
+
+		// Notify other users that this user is offline
+		BroadcastUserStatus(userID, false)
 	}()
 
-	// Simple ping-pong to keep connection alive
+	// Main message loop
 	for {
-		_, _, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
+			log.Printf("Error reading message: %v", err)
 			break
+		}
+
+		// Parse the message
+		var wsMsg WSMessage
+		if err := json.Unmarshal(msg, &wsMsg); err != nil {
+			log.Printf("Error parsing message: %v", err)
+			continue
+		}
+
+		// Handle different message types
+		switch wsMsg.Type {
+		case "private_message":
+			HandlePrivateMessage(wsMsg.Content, userID)
+		case "typing":
+			// Handle typing indicators
+			HandleTypingIndicator(wsMsg.Content, userID)
+		case "read_receipt":
+			// Handle read receipts
+			HandleReadReceipt(wsMsg.Content, userID)
+		default:
+			log.Printf("Unknown message type: %s", wsMsg.Type)
 		}
 	}
 }
@@ -104,4 +153,175 @@ func BroadcastMessage(messageType string, content interface{}) {
 	}
 	log.Printf("🔹 Remaining clients after cleanup: %d", len(clients))
 	clientsMutex.Unlock()
+}
+
+// SendToUser sends a message to a specific user
+func SendToUser(userId string, messageType string, content interface{}) {
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+
+	conn, exists := clients[userId]
+	if !exists {
+		log.Printf("User %s not connected", userId)
+		return
+	}
+
+	message := WSMessage{
+		Type:    messageType,
+		Content: content,
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("Error marshalling message: %v", err)
+		return
+	}
+
+	err = conn.WriteMessage(websocket.TextMessage, data)
+	if err != nil {
+		log.Printf("Error sending message to user %s: %v", userId, err)
+		conn.Close()
+		delete(clients, userId)
+	}
+}
+
+// BroadcastUserStatus notifies all users about a user's online status
+func BroadcastUserStatus(userId string, isOnline bool) {
+	message := WSMessage{
+		Type: "user_status",
+		Content: map[string]interface{}{
+			"userId":   userId,
+			"isOnline": isOnline,
+		},
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		log.Printf("Error marshalling status message: %v", err)
+		return
+	}
+
+	clientsMutex.Lock()
+	defer clientsMutex.Unlock()
+
+	for user_id, client := range clients {
+		err := client.WriteMessage(websocket.TextMessage, data)
+		if err != nil {
+			log.Printf("Error sending status message: %v", err)
+			client.Close()
+			delete(clients, user_id)
+		}
+	}
+}
+
+// HandlePrivateMessage processes and delivers a private message
+func HandlePrivateMessage(content interface{}, senderId string) {
+	// Convert content to map
+	contentMap, ok := content.(map[string]interface{})
+	if !ok {
+		log.Printf("Invalid message content format")
+		return
+	}
+
+	// Extract message details
+	receiverId, ok := contentMap["receiver_id"].(string)
+	if !ok {
+		log.Printf("Invalid receiver ID")
+		return
+	}
+
+	messageContent, ok := contentMap["content"].(string)
+	if !ok {
+		log.Printf("Invalid message content")
+		return
+	}
+
+	// Get sender's username
+	senderName, err := GetUsernameById(senderId)
+	if err != nil {
+		log.Printf("Error getting sender username: %v", err)
+		return
+	}
+
+	// Create message struct
+	now := time.Now()
+	message := PrivateMessage{
+		SenderId:   senderId,
+		Sender:     senderName,
+		ReceiverId: receiverId,
+		Content:    messageContent,
+		Timestamp:  now,
+	}
+
+	// Save message to database
+	messageId, err := SaveMessage(message)
+	if err != nil {
+		log.Printf("Error saving message: %v", err)
+		return
+	}
+	message.ID = messageId
+
+	// Send message to recipient if online
+	SendToUser(receiverId, "private_message", message)
+
+	// Send confirmation back to sender
+	SendToUser(senderId, "message_sent", map[string]interface{}{
+		"messageId":  messageId,
+		"receiverId": receiverId,
+		"timestamp":  now,
+	})
+}
+
+// HandleTypingIndicator processes typing indicators
+func HandleTypingIndicator(content interface{}, senderId string) {
+	contentMap, ok := content.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	receiverId, ok := contentMap["receiver_id"].(string)
+	if !ok {
+		return
+	}
+
+	isTyping, ok := contentMap["is_typing"].(bool)
+	if !ok {
+		return
+	}
+
+	// Send typing indicator to recipient
+	SendToUser(receiverId, "typing_indicator", map[string]interface{}{
+		"senderId": senderId,
+		"isTyping": isTyping,
+	})
+}
+
+// HandleReadReceipt processes read receipts
+func HandleReadReceipt(content interface{}, userId string) {
+	contentMap, ok := content.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	messageId, ok := contentMap["message_id"].(float64)
+	if !ok {
+		return
+	}
+
+	otherUserId, ok := contentMap["user_id"].(string)
+	if !ok {
+		return
+	}
+
+	// Mark message as read in database
+	err := MarkMessageAsRead(int64(messageId))
+	if err != nil {
+		log.Printf("Error marking message as read: %v", err)
+	}
+
+	// Notify sender that message was read
+	SendToUser(otherUserId, "read_receipt", map[string]interface{}{
+		"messageId": messageId,
+		"userId":    userId,
+	})
 }
