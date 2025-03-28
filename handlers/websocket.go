@@ -20,7 +20,7 @@ var (
 	}
 
 	// Store active connections
-	clients      = make(map[*websocket.Conn]bool)
+	clients      = make(map[string]*websocket.Conn)
 	clientsMutex = sync.Mutex{}
 )
 
@@ -32,6 +32,20 @@ type WSMessage struct {
 
 // WebSocketHandler handles WebSocket connections
 func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_id")
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    // Validate session
+    var userID string
+    err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", cookie.Value).Scan(&userID)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+
 	// Upgrade the HTTP connection to a WebSocket connection
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -42,14 +56,14 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Register the new client
 	clientsMutex.Lock()
-	clients[conn] = true
+	clients[userID] = conn
 	log.Printf("Client connected! Total clients: %d", len(clients))
 	clientsMutex.Unlock()
 
 	// Remove client when connection closes
 	defer func() {
 		clientsMutex.Lock()
-		delete(clients, conn)
+		delete(clients, userID)
 		log.Printf("Client disconnected! Total clients: %d", len(clients))
 		clientsMutex.Unlock()
 	}()
@@ -80,12 +94,12 @@ func BroadcastMessage(messageType string, content interface{}) {
 	// Send to all clients
 	clientsMutex.Lock()
 	log.Printf("Broadcasting to %d clients", len(clients)) // 🔹 Log number of clients
-	for client := range clients {
-		err := client.WriteMessage(websocket.TextMessage, data)
+	for userID, conn := range clients {
+		err := conn.WriteMessage(websocket.TextMessage, data)
 		if err != nil {
 			log.Printf("Error sending message: %v", err)
-			client.Close()
-			delete(clients, client)
+			conn.Close()
+			delete(clients, userID)
 		}
 	}
 	log.Printf("🔹 Remaining clients after cleanup: %d", len(clients))
