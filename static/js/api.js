@@ -125,7 +125,7 @@ const api = {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                receiver_id: userId,
+                receiverId: userId,
                 content: content
             })
         });
