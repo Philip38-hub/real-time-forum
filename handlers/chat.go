@@ -13,7 +13,7 @@ import (
 
 // Message request and response structures
 type MessageRequest struct {
-	ReceiverId string `json:"receiver_id"`
+	ReceiverId string `json:"receiverId"`
 	Content    string `json:"content"`
 }
 
@@ -21,7 +21,7 @@ type MessageResponse struct {
 	Success   bool        `json:"success"`
 	Message   string      `json:"message,omitempty"`
 	MessageId int64       `json:"messageId,omitempty"`
-	Messages  interface{} `json:"messages,omitempty"`
+	Messages  []ChatMessage `json:"messages,omitempty"`
 	Users     interface{} `json:"users,omitempty"`
 }
 
@@ -160,12 +160,13 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create message
-	message := PrivateMessage{
+	message := ChatMessage{
 		SenderId:   session.UserID,
-		Sender:     senderName,
+		SenderName: senderName,
 		ReceiverId: msgRequest.ReceiverId,
 		Content:    msgRequest.Content,
 		Timestamp:  time.Now(),
+		IsRead:     false,
 	}
 
 	// Save message to database
@@ -185,7 +186,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	clientsMutex.Unlock()
 
 	if isOnline {
-		go SendToUser(msgRequest.ReceiverId, "private_message", message)
+		go SendToUser(msgRequest.ReceiverId, "privateMessage", message)
 	}
 
 	// Send response
@@ -234,7 +235,7 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // SaveMessage stores a private message in the database
-func SaveMessage(message PrivateMessage) (int64, error) {
+func SaveMessage(message ChatMessage) (int64, error) {
 	query := `INSERT INTO private_messages 
               (sender_id, receiver_id, content, timestamp, is_read) 
               VALUES (?, ?, ?, ?, ?)`
@@ -250,7 +251,7 @@ func SaveMessage(message PrivateMessage) (int64, error) {
 		message.ReceiverId,
 		message.Content,
 		message.Timestamp,
-		false, // Not read initially
+		message.IsRead,
 	)
 	if err != nil {
 		return 0, err
@@ -274,10 +275,10 @@ func MarkMessageAsRead(messageId int64) error {
 }
 
 // GetMessages retrieves messages between two users with pagination
-func GetMessages(userId1 string, userId2 string, page int, limit int) ([]PrivateMessage, error) {
+func GetMessages(userId1 string, userId2 string, page int, limit int) ([]ChatMessage, error) {
 	offset := (page - 1) * limit
 
-	query := `SELECT pm.id, pm.sender_id, u.nickname, pm.receiver_id, pm.content, pm.timestamp 
+	query := `SELECT pm.id, pm.sender_id, u.nickname, pm.receiver_id, pm.content, pm.timestamp, pm.is_read 
 	          FROM private_messages pm
 	          JOIN users u ON pm.sender_id = u.id
 	          WHERE (pm.sender_id = ? AND pm.receiver_id = ?) 
@@ -291,10 +292,10 @@ func GetMessages(userId1 string, userId2 string, page int, limit int) ([]Private
 	}
 	defer rows.Close()
 
-	var messages []PrivateMessage
+	var messages []ChatMessage
 	for rows.Next() {
-		var msg PrivateMessage
-		err := rows.Scan(&msg.ID, &msg.SenderId, &msg.Sender, &msg.ReceiverId, &msg.Content, &msg.Timestamp)
+		var msg ChatMessage
+		err := rows.Scan(&msg.ID, &msg.SenderId, &msg.SenderName, &msg.ReceiverId, &msg.Content, &msg.Timestamp, &msg.IsRead)
 		if err != nil {
 			return nil, err
 		}
