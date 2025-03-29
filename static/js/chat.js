@@ -90,6 +90,11 @@ const Chat = {
         webSocketManager.registerHandler('userStatus', (content) => {
             this.updateUserStatus(content.userId, content.online);
         });
+
+        // handler for messageSent confirmation
+        webSocketManager.registerHandler('messageSent', (content) => {
+            logger.info('Message delivered:', content.messageId);
+        });
     },
     
     attachEventListeners() {
