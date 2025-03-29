@@ -18,11 +18,11 @@ type MessageRequest struct {
 }
 
 type MessageResponse struct {
-	Success   bool        `json:"success"`
-	Message   string      `json:"message,omitempty"`
-	MessageId int64       `json:"messageId,omitempty"`
+	Success   bool          `json:"success"`
+	Message   string        `json:"message,omitempty"`
+	MessageId int64         `json:"messageId,omitempty"`
 	Messages  []ChatMessage `json:"messages,omitempty"`
-	Users     interface{} `json:"users,omitempty"`
+	Users     interface{}   `json:"users,omitempty"`
 }
 
 // GetUsersHandler returns a list of all users
