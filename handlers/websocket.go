@@ -27,18 +27,19 @@ var (
 
 // Message represents the structure of WebSocket messages
 type WSMessage struct {
-	Type    string      `json:"type"`    // "new_post", "new_comment", "new_like", etc.
+	Type    string      `json:"type"`    // "newMessage", "newComment", "newLike", etc.
 	Content interface{} `json:"content"` // The actual data
 }
 
-// PrivateMessage represents a message sent between users
-type PrivateMessage struct {
+// ChatMessage represents a private message
+type ChatMessage struct {
 	ID         int64     `json:"id"`
 	SenderId   string    `json:"senderId"`
-	Sender     string    `json:"sender"` // Sender's username
+	SenderName string    `json:"senderName"`
 	ReceiverId string    `json:"receiverId"`
 	Content    string    `json:"content"`
 	Timestamp  time.Time `json:"timestamp"`
+	IsRead     bool      `json:"isRead"`
 }
 
 // WebSocketHandler handles WebSocket connections
@@ -86,7 +87,6 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	// Remove client when connection closes
 	defer func() {
 		clientsMutex.Lock()
-		//	delete(clients, conn)
 		delete(clients, userID)
 		log.Printf("User %s disconnected! Total users: %d", userID, len(clients))
 		clientsMutex.Unlock()
@@ -112,12 +112,12 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 
 		// Handle different message types
 		switch wsMsg.Type {
-		case "private_message":
+		case "privateMessage":
 			HandlePrivateMessage(wsMsg.Content, userID)
-		case "typing":
+		case "typingIndicator":
 			// Handle typing indicators
 			HandleTypingIndicator(wsMsg.Content, userID)
-		case "read_receipt":
+		case "readReceipt":
 			// Handle read receipts
 			HandleReadReceipt(wsMsg.Content, userID)
 		default:
@@ -188,10 +188,10 @@ func SendToUser(userId string, messageType string, content interface{}) {
 // BroadcastUserStatus notifies all users about a user's online status
 func BroadcastUserStatus(userId string, isOnline bool) {
 	message := WSMessage{
-		Type: "user_status",
+		Type: "userStatus",
 		Content: map[string]interface{}{
-			"userId":   userId,
-			"isOnline": isOnline,
+			"userId": userId,
+			"online": isOnline,
 		},
 	}
 
@@ -224,7 +224,7 @@ func HandlePrivateMessage(content interface{}, senderId string) {
 	}
 
 	// Extract message details
-	receiverId, ok := contentMap["receiver_id"].(string)
+	receiverId, ok := contentMap["receiverId"].(string)
 	if !ok {
 		log.Printf("Invalid receiver ID")
 		return
@@ -245,12 +245,13 @@ func HandlePrivateMessage(content interface{}, senderId string) {
 
 	// Create message struct
 	now := time.Now()
-	message := PrivateMessage{
+	message := ChatMessage{
 		SenderId:   senderId,
-		Sender:     senderName,
+		SenderName: senderName,
 		ReceiverId: receiverId,
 		Content:    messageContent,
 		Timestamp:  now,
+		IsRead:     false,
 	}
 
 	// Save message to database
@@ -262,10 +263,10 @@ func HandlePrivateMessage(content interface{}, senderId string) {
 	message.ID = messageId
 
 	// Send message to recipient if online
-	SendToUser(receiverId, "private_message", message)
+	SendToUser(receiverId, "privateMessage", message)
 
 	// Send confirmation back to sender
-	SendToUser(senderId, "message_sent", map[string]interface{}{
+	SendToUser(senderId, "messageSent", map[string]interface{}{
 		"messageId":  messageId,
 		"receiverId": receiverId,
 		"timestamp":  now,
@@ -279,18 +280,18 @@ func HandleTypingIndicator(content interface{}, senderId string) {
 		return
 	}
 
-	receiverId, ok := contentMap["receiver_id"].(string)
+	receiverId, ok := contentMap["receiverId"].(string)
 	if !ok {
 		return
 	}
 
-	isTyping, ok := contentMap["is_typing"].(bool)
+	isTyping, ok := contentMap["typing"].(bool)
 	if !ok {
 		return
 	}
 
 	// Send typing indicator to recipient
-	SendToUser(receiverId, "typing_indicator", map[string]interface{}{
+	SendToUser(receiverId, "typingIndicator", map[string]interface{}{
 		"senderId": senderId,
 		"isTyping": isTyping,
 	})
@@ -303,12 +304,12 @@ func HandleReadReceipt(content interface{}, userId string) {
 		return
 	}
 
-	messageId, ok := contentMap["message_id"].(float64)
+	messageId, ok := contentMap["messageId"].(float64)
 	if !ok {
 		return
 	}
 
-	otherUserId, ok := contentMap["user_id"].(string)
+	otherUserId, ok := contentMap["senderId"].(string)
 	if !ok {
 		return
 	}
@@ -320,7 +321,7 @@ func HandleReadReceipt(content interface{}, userId string) {
 	}
 
 	// Notify sender that message was read
-	SendToUser(otherUserId, "read_receipt", map[string]interface{}{
+	SendToUser(otherUserId, "readReceipt", map[string]interface{}{
 		"messageId": messageId,
 		"userId":    userId,
 	})
