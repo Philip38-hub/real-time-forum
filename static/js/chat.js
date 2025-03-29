@@ -66,29 +66,29 @@ const Chat = {
     // Register WebSocket message handlers for chat-related messages
     registerWebSocketHandlers() {
         // Handle private messages
-        webSocketManager.registerHandler('private_message', (content) => {
-            if (content.receiver_id === this.currentUserId || content.sender_id === this.currentUserId) {
-                this.handleIncommingMessage(content);
+        webSocketManager.registerHandler('privateMessage', (content) => {
+            if (content.receiverId === this.currentUserId || content.senderId === this.currentUserId) {
+                this.handleIncomingMessage(content);
             }
         });
         
         // Handle typing indicators
-        webSocketManager.registerHandler('typing_indicator', (content) => {
-            if (content.receiver_id === this.currentUserId) {
+        webSocketManager.registerHandler('typingIndicator', (content) => {
+            if (content.receiverId === this.currentUserId) {
                 this.showTypingIndicator(content);
             }
         });
         
         // Handle read receipts
-        webSocketManager.registerHandler('read_receipt', (content) => {
-            if (content.sender_id === this.currentUserId) {
+        webSocketManager.registerHandler('readReceipt', (content) => {
+            if (content.senderId === this.currentUserId) {
                 this.markMessageAsRead(content);
             }
         });
         
         // Handle user status updates
-        webSocketManager.registerHandler('user_status', (content) => {
-            this.updateUserStatus(content.user_id, content.online);
+        webSocketManager.registerHandler('userStatus', (content) => {
+            this.updateUserStatus(content.userId, content.online);
         });
     },
     
@@ -295,7 +295,7 @@ const Chat = {
         
         messages.forEach(msg => {
             const messageElement = document.createElement('div');
-            const isSent = msg.sender_id === this.currentUserId || msg.senderId === this.currentUserId;
+            const isSent = msg.senderId === this.currentUserId;
             
             messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
             messageElement.dataset.messageId = msg.id;
@@ -303,28 +303,25 @@ const Chat = {
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
             const formattedDate = date.toLocaleString();
-            const sender = msg.sender || (isSent ? this.currentUsername : this.getChatUserName());
+            const sender = msg.senderName || (isSent ? this.currentUsername : this.getChatUserName());
             
             messageElement.innerHTML = `
                 <div class="message-content">${msg.content}</div>
                 <div class="message-info">
                     ${sender} • ${formattedDate}
                 </div>
-            `;  
+            `;
+            
             fragment.appendChild(messageElement);
         });
         
         if (prepend) {
             // Insert at the beginning
             this.chatMessages.prepend(fragment);
-            
-            // Maintain scroll position when loading older messages
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight - scrollPos;
         } else {
             // Append at the end
             this.chatMessages.appendChild(fragment);
-            
-            // Scroll to bottom for new messages
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         }
     },
@@ -341,13 +338,11 @@ const Chat = {
         const content = this.chatInput.value.trim();
     
         if (content && this.currentChatUserId) {
-            // Optimistically add message to UI
             const optimisticMsg = {
                 id: 'temp-' + Date.now(),
-                sender_id: this.currentUserId,
                 senderId: this.currentUserId,
-                sender: this.currentUsername,
-                receiver_id: this.currentChatUserId,
+                senderName: this.currentUsername,
+                receiverId: this.currentChatUserId,
                 content: content,
                 timestamp: new Date().toISOString()
             };
@@ -357,6 +352,7 @@ const Chat = {
                 this.messages[this.currentChatUserId] = [];
             }
             this.messages[this.currentChatUserId].push(optimisticMsg);
+            
             this.renderMessages([optimisticMsg]);
             
             // Send message via WebSocket
@@ -366,9 +362,8 @@ const Chat = {
     },
     
     sendPrivateMessage(receiverId, content) {
-        // Send via WebSocket
-        const messageSent = webSocketManager.sendMessage('private_message', {
-            receiver_id: receiverId,
+        const messageSent = webSocketManager.sendMessage('privateMessage', {
+            receiverId: receiverId,
             content: content
         });
         
@@ -391,12 +386,11 @@ const Chat = {
     },
     
     handleIncomingMessage(message) {
-        // Determine if this is for the current chat
-        const isCurrentChat = this.currentChatUserId === message.sender_id || 
-                             this.currentChatUserId === message.receiver_id;
+        const isCurrentChat = this.currentChatUserId === message.senderId || 
+                            this.currentChatUserId === message.receiverId;
         
-        // Store message data
-        const userId = message.sender_id === this.currentUserId ? message.receiver_id : message.sender_id;
+        const userId = message.senderId === this.currentUserId ? 
+                      message.receiverId : message.senderId;
         
         if (!this.messages[userId]) {
             this.messages[userId] = [];
@@ -406,16 +400,15 @@ const Chat = {
         // If in current chat, render message
         if (isCurrentChat) {
             this.renderMessages([message]);
-            // Mark as read if we received a message
-            if (message.sender_id !== this.currentUserId) {
-                this.markMessagesAsRead(message.sender_id);
+            if (message.senderId !== this.currentUserId) {
+                this.markMessagesAsRead(message.senderId);
             }
-        } else if (message.sender_id !== this.currentUserId) {
-            // Increment unread count for messages we receive but aren't viewing
-            if (!this.unreadMessages[message.sender_id]) {
-                this.unreadMessages[message.sender_id] = 0;
+        } else if (message.senderId !== this.currentUserId) {
+            if (!this.unreadMessages[message.senderId]) {
+                this.unreadMessages[message.senderId] = 0;
             }
-            this.unreadMessages[message.sender_id]++;
+            this.unreadMessages[message.senderId]++;
+            
             this.updateUnreadCount();
             this.renderUsers(); // Update user list to show unread indicator
         }
@@ -425,10 +418,9 @@ const Chat = {
         try {
             this.clearUnread(userId);
             
-            // Send read receipt via WebSocket
-            webSocketManager.sendMessage('read_receipt', {
-                reader_id: this.currentUserId,
-                sender_id: userId
+            webSocketManager.sendMessage('readReceipt', {
+                readerId: this.currentUserId,
+                senderId: userId
             });
             await UI.markMessageAsRead(userId); // Mark messages as read in UI
         } catch (error) {
@@ -450,24 +442,24 @@ const Chat = {
         }
         
         // Send typing indicator
-        webSocketManager.sendMessage('typing_indicator', {
-            sender_id: this.currentUserId,
-            receiver_id: this.currentChatUserId,
+        webSocketManager.sendMessage('typingIndicator', {
+            senderId: this.currentUserId,
+            receiverId: this.currentChatUserId,
             typing: true
         });
         
         // Set timeout to stop typing indicator
         this.typingTimeout = setTimeout(() => {
-            webSocketManager.sendMessage('typing_indicator', {
-                sender_id: this.currentUserId,
-                receiver_id: this.currentChatUserId,
+            webSocketManager.sendMessage('typingIndicator', {
+                senderId: this.currentUserId,
+                receiverId: this.currentChatUserId,
                 typing: false
             });
         }, 2000);
     },
     
     showTypingIndicator(data) {
-        if (!this.typingIndicator || data.sender_id !== this.currentChatUserId) return;
+        if (!this.typingIndicator || data.senderId !== this.currentChatUserId) return;
         
         if (data.typing) {
             this.typingIndicator.classList.remove('hidden');
@@ -512,7 +504,7 @@ const Chat = {
     
     markMessageAsRead(data) {
         // Update UI to show message has been read
-        const userElement = document.querySelector(`.user[data-user-id="${data.reader_id}"]`);
+        const userElement = document.querySelector(`.user[data-user-id="${data.readerId}"]`);
         if (!userElement) return;
         
         const unreadElement = userElement.querySelector('.unread-count');
