@@ -2,485 +2,17 @@
  * Private messaging functionality
  */
 
-// const Chat = {
-//     currentChatUser: null,
-//     users: [],
-//     messages: {},
-//     unreadMessages: {},
-//     isMinimized: false,
-//     page: 1,
-//     isLoadingMessages: false,
-//     hasMoreMessages: true,
-
-//     /**
-//      * Initialize chat functionality
-//      */
-//     init() {
-//         this.initElements();
-//         this.attachEventListeners();
-//         this.updateUnreadCount();
-//     },
-
-//     /**
-//      * Initialize DOM elements
-//      */
-//     initElements() {
-//         this.chatToggle = document.getElementById('chat-toggle');
-//         this.chatContainer = document.getElementById('chat-container');
-//         this.minimizeBtn = document.getElementById('minimize-chat');
-//         this.closeBtn = document.getElementById('close-chat');
-//         this.chatMain = document.getElementById('chat-main');
-//         this.usersList = document.getElementById('users-list');
-//         this.chatMessages = document.getElementById('chat-messages');
-//         this.chatForm = document.getElementById('chat-form');
-//         this.chatInput = document.getElementById('chat-input');
-//         this.chatUserName = document.getElementById('chat-user-name');
-//         this.chatUserStatus = document.getElementById('chat-user-status');
-//         this.userSearch = document.getElementById('user-search');
-//         this.unreadCountElement = document.getElementById('unread-count');
-//     },
-
-//     /**
-//      * Attach event listeners
-//      */
-//     attachEventListeners() {
-//         // Toggle chat sidebar
-//         this.chatToggle.addEventListener('click', () => this.toggleChat());
-        
-//         // Minimize chat
-//         this.minimizeBtn.addEventListener('click', () => this.minimizeChat());
-        
-//         // Close current chat
-//         this.closeBtn.addEventListener('click', () => this.closeCurrentChat());
-        
-//         // Send message
-//         this.chatForm.addEventListener('submit', (e) => this.handleSendMessage(e));
-        
-//         // Load more messages when scrolling up
-//         this.chatMessages.addEventListener('scroll', throttle(() => this.handleScroll(), 500));
-        
-//         // Filter users
-//         this.userSearch.addEventListener('input', debounce((e) => this.filterUsers(e.target.value), 300));
-//     },
-
-//     /**
-//      * Toggle chat sidebar visibility
-//      */
-//     toggleChat() {
-//         toggleElement(this.chatContainer);
-        
-//         if (!this.chatContainer.classList.contains('hidden')) {
-//             this.isMinimized = false;
-//             this.chatContainer.classList.remove('minimized');
-//             this.loadUsers(); // Reload users when opening chat
-//         }
-//     },
-
-//     /**
-//      * Minimize chat window
-//      */
-//     minimizeChat() {
-//         this.isMinimized = !this.isMinimized;
-//         this.chatContainer.classList.toggle('minimized');
-//     },
-
-//     /**
-//      * Close current chat conversation
-//      */
-//     closeCurrentChat() {
-//         hideElement(this.chatMain);
-//         this.currentChatUser = null;
-//     },
-
-//     /**
-//      * Load all users
-//      */
-//     async loadUsers() {
-//         try {
-//             const response = await api.fetchUsers();
-            
-//             if (response && response.success) {
-//                 this.users = response.users;
-//                 this.renderUsers();
-//             }
-//         } catch (error) {
-//             logger.error('Error loading users:', error);
-//         }
-//     },
-
-//     /**
-//      * Render users list
-//      */
-//     renderUsers() {
-//         this.usersList.innerHTML = '';
-        
-//         // Sort users: first by last message time, then alphabetically
-//         const sortedUsers = [...this.users].sort((a, b) => {
-//             // First check if there are messages
-//             const aLastMessageTime = this.getLastMessageTime(a.id);
-//             const bLastMessageTime = this.getLastMessageTime(b.id);
-            
-//             // If both have messages, sort by most recent
-//             if (aLastMessageTime && bLastMessageTime) {
-//                 return bLastMessageTime - aLastMessageTime;
-//             }
-            
-//             // If only one has messages, prioritize that one
-//             if (aLastMessageTime) return -1;
-//             if (bLastMessageTime) return 1;
-            
-//             // If neither has messages, sort alphabetically
-//             return a.nickname.localeCompare(b.nickname);   // 2 nickname
-//         });
-        
-//         sortedUsers.forEach(user => {
-//             const listItem = document.createElement('li');
-//             listItem.setAttribute('data-user-id', user.id);
-//             listItem.addEventListener('click', () => this.openChat(user));
-            
-//             const hasUnread = this.unreadMessages[user.id] && this.unreadMessages[user.id] > 0;
-            
-//             listItem.innerHTML = `
-//                 <span class="user-status-indicator ${user.online ? 'online' : 'offline'}"></span>
-//                 <span class="user-name">${user.nickname}</span>
-//                 ${hasUnread ? '<span class="unread-indicator"></span>' : ''}
-//             `;
-            
-//             this.usersList.appendChild(listItem);
-//         });
-//     },
-
-//     /**
-//      * Filter users by search term
-//      */
-//     filterUsers(searchTerm) {
-//         const items = this.usersList.querySelectorAll('li');
-//         const lowerSearchTerm = searchTerm.toLowerCase();
-        
-//         items.forEach(item => {
-//             const username = item.querySelector('.user-name').textContent.toLowerCase();
-//             if (username.includes(lowerSearchTerm)) {
-//                 item.style.display = 'flex';
-//             } else {
-//                 item.style.display = 'none';
-//             }
-//         });
-//     },
-
-//     /**
-//      * Open chat with specific user
-//      */
-//     async openChat(user) {
-//         // Set current chat user
-//         this.currentChatUser = user;
-        
-//         // Update UI
-//         this.chatUserName.textContent = user.nickname;
-//         this.chatUserStatus.textContent = user.online ? 'online' : 'offline';
-//         this.chatUserStatus.className = `user-status ${user.online ? 'online' : 'offline'}`;
-        
-//         // Show chat main
-//         showElement(this.chatMain);
-        
-//         // Clear messages area
-//         this.chatMessages.innerHTML = '';
-        
-//         // Reset pagination
-//         this.page = 1;
-//         this.hasMoreMessages = true;
-        
-//         // Load messages
-//         await this.loadMessages();
-        
-//         // Clear unread for this user
-//         this.clearUnread(user.id);
-        
-//         // Focus input
-//         this.chatInput.focus();
-//     },
-
-//     /**
-//      * Load messages for current chat
-//      */
-//     async loadMessages() {
-//         if (!this.currentChatUser || this.isLoadingMessages || !this.hasMoreMessages) return;
-        
-//         try {
-//             this.isLoadingMessages = true;
-            
-//             // Show loading indicator
-//             const loadingEl = document.createElement('div');
-//             loadingEl.className = 'loading-messages';
-//             loadingEl.textContent = 'Loading messages...';
-//             this.chatMessages.prepend(loadingEl);
-            
-//             const response = await api.fetchMessages(this.currentChatUser.id, this.page);
-//             // response.messages.forEach((msg) => {
-//             //     msg.senderId = response.senderId;
-//             // });
-
-//             // Remove loading indicator
-//             loadingEl.remove();
-            
-//             if (response && response.success) {
-//                 // Check if we have more messages
-//                 const allMessages = response.messages || [];
-
-//                 this.hasMoreMessages = allMessages.length === 10;
-//                 // Store messages
-//                 if (!this.messages[this.currentChatUser.id]) {
-//                     this.messages[this.currentChatUser.id] = [];
-//                 }
-                
-//                 // Add messages to the beginning of the array
-//                 this.messages[this.currentChatUser.id] = [
-//                     ...allMessages,
-//                     ...this.messages[this.currentChatUser.id]
-//                 ];
-                
-//                 // Render messages
-//                 this.renderMessages(allMessages, true);
-                
-//                 // Increment page for next load
-//                 this.page++;
-//             }
-//         } catch (error) {
-//             logger.error('Error loading messages:', error);
-//         } finally {
-//             this.isLoadingMessages = false;
-//         }
-//     },
-
-//     /**
-//      * Render messages in chat
-//      * @param {Array} messages - Messages to render
-//      * @param {Boolean} prepend - Whether to prepend or append messages
-//      */
-//     renderMessages(messages, prepend = false) {
-//         if (!messages || messages.length === 0) return;
-        
-//         // Get current scroll position
-//         const scrollPos = this.chatMessages.scrollHeight - this.chatMessages.scrollTop;
-        
-//         // Create document fragment for better performance
-//         const fragment = document.createDocumentFragment();
-        
-//         messages.forEach(msg => {
-//             const messageEl = document.createElement('div');
-//             messageEl.className = `message ${msg.senderId === Chat.userId? 'outgoing' : 'incoming'}`;
-//             messageEl.setAttribute('data-message-id', msg.id);
-            
-//             const date = new Date(msg.timestamp);
-//             const formattedDate = date.toLocaleString();
-            
-//             messageEl.innerHTML = `
-//                 <div class="message-content">${msg.content}</div>
-//                 <div class="message-info">
-//                     ${msg.sender} • ${formattedDate}
-//                 </div>
-//             `;
-            
-//             fragment.appendChild(messageEl);
-//         });
-        
-//         if (prepend) {
-//             // Insert at the beginning
-//             this.chatMessages.prepend(fragment);
-            
-//             // Maintain scroll position when loading older messages
-//             this.chatMessages.scrollTop = this.chatMessages.scrollHeight - scrollPos;
-//         } else {
-//             // Append at the end
-//             this.chatMessages.appendChild(fragment);
-            
-//             // Scroll to bottom for new messages
-//             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-//         }
-//     },
-
-//     /**
-//      * Handle sending a message
-//      */
-//     async handleSendMessage(event) {
-//         event.preventDefault();
-        
-//         if (!this.currentChatUser) return;
-        
-//         const content = this.chatInput.value.trim();
-//         if (!content) return;
-        
-//         try {
-//             // const userId = localStorage.getItem('userId');
-//             // const username = localStorage.getItem('username');
-            
-//             // Optimistically add message to UI
-//             const optimisticMsg = {
-//                 id: 'temp-' + Date.now(),
-//                 senderId: null,
-//                 sender: null,
-//                 receiverId: this.currentChatUser.id,
-//                 content: content,
-//                 timestamp: new Date().toISOString()
-//             };
-            
-//             // Add to local messages
-//             if (!this.messages[this.currentChatUser.id]) {
-//                 this.messages[this.currentChatUser.id] = [];
-//             }
-//             this.messages[this.currentChatUser.id].push(optimisticMsg);
-            
-//             // Render message
-//             this.renderMessages([optimisticMsg]);
-            
-//             // Clear input
-//             this.chatInput.value = '';
-//             // Send message to backend via WebSocket
-//             webSocketManager.socket.send(JSON.stringify({
-//                 type: 'privateMessage',
-//                 content: {
-//                     receiverId: this.currentChatUser.id,
-//                     content: content
-//                 }
-//             }));
-//             // // Send message to server
-//             // const response = await api.sendMessage(this.currentChatUser.id, content);
-            
-//             // if (!response || !response.success) {
-//             //     throw new Error(response?.message || 'Failed to send message');
-//             // }
-            
-//             // // Update optimistic message with real ID if needed
-//             // if (response.messageId) {
-//             //     const tempMsg = document.querySelector(`[data-message-id="temp-${Date.now()}"]`);
-//             //     if (tempMsg) {
-//             //         tempMsg.setAttribute('data-message-id', response.messageId);
-//             //     }
-//             // }
-//         } catch (error) {
-//             logger.error('Error sending message:', error);
-//             alert('Failed to send message. Please try again.');
-//         }
-//     },
-
-//     /**
-//      * Handle scroll in messages container
-//      */
-//     handleScroll() {
-//         // If scrolled to top, load more messages
-//         if (this.chatMessages.scrollTop === 0 && !this.isLoadingMessages && this.hasMoreMessages) {
-//             this.loadMessages();
-//         }
-//     },
-
-//     /**
-//      * Handle incoming message from WebSocket
-//      */
-//     handleIncomingMessage(message) {
-//         // Check if message is for current chat
-//         const isCurrentChat = this.currentChatUser && 
-//             (message.senderId === this.currentChatUser.id || message.receiverId === this.currentChatUser.id);
-        
-//         // Store message
-//         const userId = message.senderId;
-//         if (!this.messages[userId]) {
-//             this.messages[userId] = [];
-//         }
-//         this.messages[userId].push(message);
-        
-//         // If in current chat, render message
-//         if (isCurrentChat) {
-//             this.renderMessages([message]);
-//         } else {
-//             // Increment unread count
-//             if (!this.unreadMessages[userId]) {
-//                 this.unreadMessages[userId] = 0;
-//             }
-//             this.unreadMessages[userId]++;
-            
-//             // Update UI
-//             this.updateUnreadCount();
-//             this.renderUsers(); // Update user list to show unread indicator
-//         }
-//     },
-
-//     /**
-//      * Clear unread messages for a user
-//      */
-//     clearUnread(userId) {
-//         if (this.unreadMessages[userId]) {
-//             this.unreadMessages[userId] = 0;
-//             this.updateUnreadCount();
-            
-//             // Update user list
-//             const userItem = this.usersList.querySelector(`[data-user-id="${userId}"]`);
-//             if (userItem) {
-//                 const indicator = userItem.querySelector('.unread-indicator');
-//                 if (indicator) {
-//                     indicator.remove();
-//                 }
-//             }
-//         }
-//     },
-
-//     /**
-//      * Update unread count badge
-//      */
-//     updateUnreadCount() {
-//         const totalUnread = Object.values(this.unreadMessages).reduce((sum, count) => sum + count, 0);
-        
-//         if (totalUnread > 0) {
-//             this.unreadCountElement.textContent = totalUnread > 99 ? '99+' : totalUnread;
-//             showElement(this.unreadCountElement);
-//         } else {
-//             hideElement(this.unreadCountElement);
-//         }
-//     },
-
-//     /**
-//      * Get last message time for a user
-//      */
-//     getLastMessageTime(userId) {
-//         if (!this.messages[userId] || this.messages[userId].length === 0) {
-//             return null;
-//         }
-        
-//         const lastMessage = this.messages[userId][this.messages[userId].length - 1];
-//         return new Date(lastMessage.timestamp).getTime();
-//     },
-
-//     /**
-//      * Update user online status
-//      */
-//     updateUserStatus(userId, isOnline) {
-//         // Update in users array
-//         const userIndex = this.users.findIndex(u => u.id === userId);
-//         if (userIndex !== -1) {
-//             this.users[userIndex].online = isOnline;
-//         }
-        
-//         // Update in current chat if applicable
-//         if (this.currentChatUser && this.currentChatUser.id === userId) {
-//             this.chatUserStatus.textContent = isOnline ? 'online' : 'offline';
-//             this.chatUserStatus.className = `user-status ${isOnline ? 'online' : 'offline'}`;
-//         }
-        
-//         // Update in user list
-//         const userItem = this.usersList.querySelector(`[data-user-id="${userId}"]`);
-//         if (userItem) {
-//             const statusIndicator = userItem.querySelector('.user-status-indicator');
-//             if (statusIndicator) {
-//                 statusIndicator.className = `user-status-indicator ${isOnline ? 'online' : 'offline'}`;
-//             }
-//         }
-//     }
-// };
-
-// Chat module for handling private messaging
 const Chat = {
     currentUserId: null,
     currentUsername: null,
     currentChatUserId: null,
     typingTimeout: null,
+    users: [],
+    messages: {}, // Store messages by user ID
+    unreadMessages: {}, // Track unread messages count
+    page: 1,
+    isLoadingMessages: false,
+    hasMoreMessages: true,
 
     async initializeChat() {
         try {
@@ -506,9 +38,29 @@ const Chat = {
     },
     
     init() {
+        this.initElements();
         this.fetchUsers();
         this.attachEventListeners();
         this.registerWebSocketHandlers();
+        this.updateUnreadCount();
+    },
+
+    //    Initialize DOM elements
+    initElements() {
+        this.chatToggle = document.getElementById('chat-toggle');
+        this.chatContainer = document.getElementById('chat-container');
+        this.minimizeBtn = document.getElementById('minimize-chat');
+        this.closeBtn = document.getElementById('close-chat');
+        this.chatMain = document.getElementById('chat-main');
+        this.usersList = document.getElementById('users-list');
+        this.chatMessages = document.getElementById('chat-messages');
+        this.chatForm = document.getElementById('chat-form');
+        this.chatInput = document.getElementById('chat-input');
+        this.chatUserName = document.getElementById('chat-user-name');
+        this.chatUserStatus = document.getElementById('chat-user-status');
+        this.userSearch = document.getElementById('user-search');
+        this.unreadCountElement = document.getElementById('unread-count');
+        this.typingIndicator = document.getElementById('typing-indicator');
     },
     
     // Register WebSocket message handlers for chat-related messages
@@ -516,7 +68,7 @@ const Chat = {
         // Handle private messages
         webSocketManager.registerHandler('private_message', (content) => {
             if (content.receiver_id === this.currentUserId || content.sender_id === this.currentUserId) {
-                this.addNewMessage(content);
+                this.handleIncommingMessage(content);
             }
         });
         
@@ -536,60 +88,66 @@ const Chat = {
         
         // Handle user status updates
         webSocketManager.registerHandler('user_status', (content) => {
-            this.updateUserStatus(content);
+            this.updateUserStatus(content.user_id, content.online);
         });
     },
     
     attachEventListeners() {
         // Chat toggle button
-        const chatToggleBtn = document.getElementById('chat-toggle');
-        if (chatToggleBtn) {
-            chatToggleBtn.addEventListener('click', this.toggleChatContainer.bind(this));
+        if (this.chatToggle) {
+            this.chatToggle.addEventListener('click', this.toggleChatContainer.bind(this));
         }
         
         // Minimize chat button
-        const minimizeChatBtn = document.getElementById('minimize-chat');
-        if (minimizeChatBtn) {
-            minimizeChatBtn.addEventListener('click', this.minimizeChat.bind(this));
+        if (this.minimizeBtn) {
+            this.minimizeBtn.addEventListener('click', this.minimizeChat.bind(this));
         }
         
         // Close chat button
-        const closeChatBtn = document.getElementById('close-chat');
-        if (closeChatBtn) {
-            closeChatBtn.addEventListener('click', this.closeChat.bind(this));
+        if (this.closeBtn) {
+            this.closeBtn.addEventListener('click', this.closeChat.bind(this));
         }
         
         // Chat form submission
-        const chatForm = document.getElementById('chat-form');
-        if (chatForm) {
-            chatForm.addEventListener('submit', this.handleMessageSubmit.bind(this));
+        if (this.chatForm) {
+            this.chatForm.addEventListener('submit', this.handleMessageSubmit.bind(this));
         }
         
         // Typing indicator
-        const chatInput = document.getElementById('chat-input');
-        if (chatInput) {
-            chatInput.addEventListener('input', this.handleTyping.bind(this));
+        if (this.chatInput) {
+            this.chatInput.addEventListener('input', this.handleTyping.bind(this));
+        }
+        
+        // Load more messages when scrolling up
+        if (this.chatMessages) {
+            this.chatMessages.addEventListener('scroll', throttle(() => this.handleScroll(), 500));
+        }
+        
+        // Filter users
+        if (this.userSearch) {
+            this.userSearch.addEventListener('input', debounce((e) => this.filterUsers(e.target.value), 300));
         }
     },
     
     toggleChatContainer() {
-        const chatContainer = document.getElementById('chat-container');
-        if (chatContainer) {
-            chatContainer.classList.toggle('hidden');
+        if (this.chatContainer) {
+            this.chatContainer.classList.toggle('hidden');
+            
+            if (!this.chatContainer.classList.contains('hidden')) {
+                this.fetchUsers(); // Reload users when opening chat
+            }
         }
     },
     
     minimizeChat() {
-        const chatMain = document.getElementById('chat-main');
-        if (chatMain) {
-            chatMain.classList.toggle('hidden');
+        if (this.chatMain) {
+            this.chatMain.classList.toggle('minimized');
         }
     },
     
     closeChat() {
-        const chatMain = document.getElementById('chat-main');
-        if (chatMain) {
-            chatMain.classList.add('hidden');
+        if (this.chatMain) {
+            this.chatMain.classList.add('hidden');
         }
         this.currentChatUserId = null;
     },
@@ -598,7 +156,8 @@ const Chat = {
         try {
             const response = await api.fetchUsers();
             if (response.success) {
-                this.renderUsers(response.users);
+                this.users = response.users;
+                this.renderUsers();
             } else {
                 logger.error('Failed to fetch users:', response.message);
             }
@@ -607,114 +166,202 @@ const Chat = {
         }
     },
     
-    renderUsers(users) {
-        const usersList = document.getElementById('users-list');
-        if (!usersList) return;
+    renderUsers() {
+        if (!this.usersList) return;
         
-        usersList.innerHTML = ''; // Clear existing users
+        this.usersList.innerHTML = ''; // Clear existing users
     
-        users.forEach(user => {
+         // Sort users: first by last message time, then alphabetically
+         const sortedUsers = [...this.users].sort((a, b) => {
+            // First check if there are messages
+            const aLastMessageTime = this.getLastMessageTime(a.id);
+            const bLastMessageTime = this.getLastMessageTime(b.id);
+            
+            // If both have messages, sort by most recent
+            if (aLastMessageTime && bLastMessageTime) {
+                return bLastMessageTime - aLastMessageTime;
+            }
+            
+            // If only one has messages, prioritize that one
+            if (aLastMessageTime) return -1;
+            if (bLastMessageTime) return 1;
+            
+            // If neither has messages, sort alphabetically
+            return a.nickname.localeCompare(b.nickname);
+        });
+    
+        sortedUsers.forEach(user => {
             const userElement = document.createElement('li');
             userElement.className = 'user';
             userElement.dataset.userId = user.id;
+            
+            const hasUnread = this.unreadMessages[user.id] && this.unreadMessages[user.id] > 0;
+            
             userElement.innerHTML = `
+                <span class="user-status-indicator ${user.online ? 'online' : 'offline'}"></span>
                 <span class="user-name">${user.nickname}</span>
-                <span class="user-status ${user.online ? 'online' : 'offline'}">
-                    ${user.online ? 'Online' : 'Offline'}
-                </span>
-                ${user.unread > 0 ? `<span class="unread-count">${user.unread}</span>` : ''}
+                ${hasUnread ? `<span class="unread-indicator">${this.unreadMessages[user.id]}</span>` : ''}
             `;
     
-            userElement.addEventListener('click', () => this.openChat(user.id, user.nickname));
-            usersList.appendChild(userElement);
+            userElement.addEventListener('click', () => this.openChat(user));
+            this.usersList.appendChild(userElement);
         });
     },
     
-    async openChat(userId, userName) {
-        this.currentChatUserId = userId;
-    
-        // Update chat header
-        const chatUserName = document.getElementById('chat-user-name');
-        const chatUserStatus = document.getElementById('chat-user-status');
+   // Filter users by search term
+   filterUsers(searchTerm) {
+        const items = this.usersList.querySelectorAll('li');
+        const lowerSearchTerm = searchTerm.toLowerCase();
         
-        if (chatUserName) chatUserName.textContent = userName;
-        if (chatUserStatus) chatUserStatus.textContent = 'Online'; // Update dynamically
-    
-        // Show chat main section
-        const chatMain = document.getElementById('chat-main');
-        if (chatMain) chatMain.classList.remove('hidden');
-    
-        // Fetch message history
-        const messages = await this.fetchMessages(userId);
-        this.renderMessages(messages);
-    
-        // Mark messages as read
-        this.markMessagesAsRead(userId);
-    },
-    
-    async fetchMessages(userId) {
-        try {
-            const response = await api.fetchMessages(userId);
-            if (response.success) {
-                return response.messages;
+        items.forEach(item => {
+            const username = item.querySelector('.user-name').textContent.toLowerCase();
+            if (username.includes(lowerSearchTerm)) {
+                item.style.display = 'flex';
             } else {
-                logger.error('Failed to fetch messages:', response.message);
-                return [];
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    async openChat(user) {
+        this.currentChatUserId = user.id;
+
+        // Update chat header
+        if (this.chatUserName) this.chatUserName.textContent = user.nickname;
+        if (this.chatUserStatus) {
+            this.chatUserStatus.textContent = user.online ? 'Online' : 'Offline';
+            this.chatUserStatus.className = `user-status ${user.online ? 'online' : 'offline'}`;
+        }
+
+        // Show chat main section
+        if (this.chatMain) this.chatMain.classList.remove('hidden');
+
+        // Clear messages area
+        if (this.chatMessages) this.chatMessages.innerHTML = '';
+        
+        // Reset pagination
+        this.page = 1;
+        this.hasMoreMessages = true;
+        await this.loadMessages(); // Load messages
+        this.markMessagesAsRead(user.id); // Mark messages as read
+        if (this.chatInput) this.chatInput.focus(); // Focus on input
+    },
+
+    async loadMessages() {
+        if (!this.currentChatUserId || this.isLoadingMessages || !this.hasMoreMessages) return;
+        
+        try {
+            this.isLoadingMessages = true;
+            
+            // Show loading indicator
+            const loadingEl = document.createElement('div');
+            loadingEl.className = 'loading-messages';
+            loadingEl.textContent = 'Loading messages...';
+            this.chatMessages.prepend(loadingEl);
+            
+            const response = await api.fetchMessages(this.currentChatUserId, this.page);
+            
+            // Remove loading indicator
+            loadingEl.remove();
+            
+            if (response.success) {
+                const messages = response.messages || [];
+                this.hasMoreMessages = messages.length === 10; // Check if we have more messages
+                
+                // Store messages
+                if (!this.messages[this.currentChatUserId]) {
+                    this.messages[this.currentChatUserId] = [];
+                }
+                
+                // Add messages to the beginning of the array
+                this.messages[this.currentChatUserId] = [
+                    ...messages,
+                    ...this.messages[this.currentChatUserId]
+                ];
+                this.renderMessages(messages, true); // Render messages
+                this.page++; // Increment page for next load
             }
         } catch (error) {
-            logger.error('Error fetching messages:', error);
-            return [];
+            logger.error('Error loading messages:', error);
+        } finally {
+            this.isLoadingMessages = false;
         }
     },
     
-    renderMessages(messages) {
-        const chatMessages = document.getElementById('chat-messages');
-        if (!chatMessages) return;
+    renderMessages(messages, prepend = false) {
+        if (!messages || messages.length === 0 || !this.chatMessages) return;
+        const scrollPos = this.chatMessages.scrollHeight - this.chatMessages.scrollTop;
+        const fragment = document.createDocumentFragment();
         
-        chatMessages.innerHTML = ''; // Clear existing messages
-    
-        messages.forEach(message => {
+        messages.forEach(msg => {
             const messageElement = document.createElement('div');
-            messageElement.className = `message ${message.senderId === this.currentUserId ? 'sent' : 'received'}`;
+            const isSent = msg.sender_id === this.currentUserId || msg.senderId === this.currentUserId;
+            
+            messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageElement.dataset.messageId = msg.id;
+            
+            const timestamp = msg.timestamp || new Date().toISOString();
+            const date = new Date(timestamp);
+            const formattedDate = date.toLocaleString();
+            const sender = msg.sender || (isSent ? this.currentUsername : this.getChatUserName());
+            
             messageElement.innerHTML = `
-                <div class="message-content">${message.content}</div>
-                <div class="message-timestamp">${new Date(message.timestamp).toLocaleTimeString()}</div>
-            `;
-            chatMessages.appendChild(messageElement);
+                <div class="message-content">${msg.content}</div>
+                <div class="message-info">
+                    ${sender} • ${formattedDate}
+                </div>
+            `;  
+            fragment.appendChild(messageElement);
         });
-    
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        if (prepend) {
+            // Insert at the beginning
+            this.chatMessages.prepend(fragment);
+            
+            // Maintain scroll position when loading older messages
+            this.chatMessages.scrollTop = this.chatMessages.scrollHeight - scrollPos;
+        } else {
+            // Append at the end
+            this.chatMessages.appendChild(fragment);
+            
+            // Scroll to bottom for new messages
+            this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        }
     },
     
-    async markMessagesAsRead(userId) {
-        try {
-            await UI.markMessageAsRead(userId);
-
-            // Send read receipt via WebSocket
-            webSocketManager.sendMessage('read_receipt', {
-                reader_id: this.currentUserId,
-                sender_id: userId
-            });
-        } catch (error) {
-            logger.error('Error marking messages as read:', error);
-        }
+    getChatUserName() {
+        return this.chatUserName ? this.chatUserName.textContent : 'User';
     },
     
     handleMessageSubmit(e) {
         e.preventDefault();
     
-        const input = document.getElementById('chat-input');
-        if (!input) return;
+        if (!this.chatInput) return;
         
-        const content = input.value.trim();
+        const content = this.chatInput.value.trim();
     
         if (content && this.currentChatUserId) {
+            // Optimistically add message to UI
+            const optimisticMsg = {
+                id: 'temp-' + Date.now(),
+                sender_id: this.currentUserId,
+                senderId: this.currentUserId,
+                sender: this.currentUsername,
+                receiver_id: this.currentChatUserId,
+                content: content,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Add to local messages
+            if (!this.messages[this.currentChatUserId]) {
+                this.messages[this.currentChatUserId] = [];
+            }
+            this.messages[this.currentChatUserId].push(optimisticMsg);
+            this.renderMessages([optimisticMsg]);
+            
             // Send message via WebSocket
-            this.sendPrivateMessage(this.currentChatUserId, content);
-    
-            // Clear input
-            input.value = '';
+            this.sendPrivateMessage(this.currentChatUserId, content); 
+            this.chatInput.value = ''; // Clear input
         }
     },
     
@@ -730,7 +377,11 @@ const Chat = {
             api.sendMessage(receiverId, content)
                 .then(response => {
                     if (response.success) {
-                        this.addNewMessage(response.message);
+                        // Update temp message with real ID if available
+                        const tempMsg = document.querySelector(`[data-message-id="temp-${Date.now()}"]`);
+                        if (tempMsg && response.message && response.message.id) {
+                            tempMsg.dataset.messageId = response.message.id;
+                        }
                     }
                 })
                 .catch(error => {
@@ -739,43 +390,63 @@ const Chat = {
         }
     },
     
-    addNewMessage(message) {
-        // Only add if currently chatting with this user
-        if (this.currentChatUserId !== message.sender_id && this.currentChatUserId !== message.receiver_id) {
-            // Update unread count on user list instead
-            this.updateUnreadCount(message.sender_id);
-            return;
+    handleIncomingMessage(message) {
+        // Determine if this is for the current chat
+        const isCurrentChat = this.currentChatUserId === message.sender_id || 
+                             this.currentChatUserId === message.receiver_id;
+        
+        // Store message data
+        const userId = message.sender_id === this.currentUserId ? message.receiver_id : message.sender_id;
+        
+        if (!this.messages[userId]) {
+            this.messages[userId] = [];
         }
+        this.messages[userId].push(message);
         
-        const chatMessages = document.getElementById('chat-messages');
-        if (!chatMessages) return;
-        
-        const messageElement = document.createElement('div');
-        const isSent = message.sender_id === this.currentUserId;
-        
-        messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
-        messageElement.innerHTML = `
-            <div class="message-content">${message.content}</div>
-            <div class="message-timestamp">${new Date(message.timestamp).toLocaleTimeString()}</div>
-        `;
-        
-        chatMessages.appendChild(messageElement);
-        
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-        // Mark as read if we received a message
-        if (!isSent && this.currentChatUserId) {
-            this.markMessagesAsRead(this.currentChatUserId);
+        // If in current chat, render message
+        if (isCurrentChat) {
+            this.renderMessages([message]);
+            // Mark as read if we received a message
+            if (message.sender_id !== this.currentUserId) {
+                this.markMessagesAsRead(message.sender_id);
+            }
+        } else if (message.sender_id !== this.currentUserId) {
+            // Increment unread count for messages we receive but aren't viewing
+            if (!this.unreadMessages[message.sender_id]) {
+                this.unreadMessages[message.sender_id] = 0;
+            }
+            this.unreadMessages[message.sender_id]++;
+            this.updateUnreadCount();
+            this.renderUsers(); // Update user list to show unread indicator
+        }
+    },
+
+    async markMessagesAsRead(userId) {
+        try {
+            this.clearUnread(userId);
+            
+            // Send read receipt via WebSocket
+            webSocketManager.sendMessage('read_receipt', {
+                reader_id: this.currentUserId,
+                sender_id: userId
+            });
+            await UI.markMessageAsRead(userId); // Mark messages as read in UI
+        } catch (error) {
+            logger.error('Error marking messages as read:', error);
         }
     },
     
+    clearUnread(userId) {
+        if (this.unreadMessages[userId]) {
+            this.unreadMessages[userId] = 0;
+            this.updateUnreadCount();
+        }
+    },
+
     handleTyping() {
         if (!this.currentChatUserId) return;
-        
-        // Clear existing timeout
         if (this.typingTimeout) {
-            clearTimeout(this.typingTimeout);
+            clearTimeout(this.typingTimeout); // Clear existing timeout
         }
         
         // Send typing indicator
@@ -796,51 +467,46 @@ const Chat = {
     },
     
     showTypingIndicator(data) {
-        if (data.sender_id !== this.currentChatUserId) return;
-        
-        const typingIndicator = document.getElementById('typing-indicator');
-        if (!typingIndicator) return;
+        if (!this.typingIndicator || data.sender_id !== this.currentChatUserId) return;
         
         if (data.typing) {
-            typingIndicator.classList.remove('hidden');
+            this.typingIndicator.classList.remove('hidden');
         } else {
-            typingIndicator.classList.add('hidden');
+            this.typingIndicator.classList.add('hidden');
         }
     },
     
-    updateUserStatus(data) {
-        const userElement = document.querySelector(`.user[data-user-id="${data.user_id}"]`);
-        if (!userElement) return;
-        
-        const statusElement = userElement.querySelector('.user-status');
-        if (statusElement) {
-            statusElement.className = `user-status ${data.online ? 'online' : 'offline'}`;
-            statusElement.textContent = data.online ? 'Online' : 'Offline';
+    updateUserStatus(userId, isOnline) {
+        const userIndex = this.users.findIndex(u => u.id === userId);
+        if (userIndex !== -1) {
+            this.users[userIndex].online = isOnline;
         }
         
-        // Update chat header if chatting with this user
-        if (this.currentChatUserId === data.user_id) {
-            const chatUserStatus = document.getElementById('chat-user-status');
-            if (chatUserStatus) {
-                chatUserStatus.textContent = data.online ? 'Online' : 'Offline';
+        // Update in current chat if applicable
+        if (this.currentChatUserId === userId && this.chatUserStatus) {
+            this.chatUserStatus.textContent = isOnline ? 'Online' : 'Offline';
+            this.chatUserStatus.className = `user-status ${isOnline ? 'online' : 'offline'}`;
+        }
+        
+        // Update in user list
+        const userItem = this.usersList ? this.usersList.querySelector(`[data-user-id="${userId}"]`) : null;
+        if (userItem) {
+            const statusIndicator = userItem.querySelector('.user-status-indicator');
+            if (statusIndicator) {
+                statusIndicator.className = `user-status-indicator ${isOnline ? 'online' : 'offline'}`;
             }
         }
     },
     
-    updateUnreadCount(userId) {
-        const userElement = document.querySelector(`.user[data-user-id="${userId}"]`);
-        if (!userElement) return;
+    updateUnreadCount() {
+        if (!this.unreadCountElement) return;
+        const totalUnread = Object.values(this.unreadMessages).reduce((sum, count) => sum + count, 0);
         
-        let unreadElement = userElement.querySelector('.unread-count');
-        
-        if (!unreadElement) {
-            unreadElement = document.createElement('span');
-            unreadElement.className = 'unread-count';
-            unreadElement.textContent = '1';
-            userElement.appendChild(unreadElement);
+        if (totalUnread > 0) {
+            this.unreadCountElement.textContent = totalUnread > 99 ? '99+' : totalUnread;
+            this.unreadCountElement.classList.remove('hidden');
         } else {
-            const currentCount = parseInt(unreadElement.textContent, 10) || 0;
-            unreadElement.textContent = (currentCount + 1).toString();
+            this.unreadCountElement.classList.add('hidden');
         }
     },
     
@@ -854,4 +520,44 @@ const Chat = {
             unreadElement.remove();
         }
     },
+     // Get last message time for a user (for sorting)
+     getLastMessageTime(userId) {
+        if (!this.messages[userId] || this.messages[userId].length === 0) {
+            return null;
+        }
+        
+        const lastMessage = this.messages[userId][this.messages[userId].length - 1];
+        return new Date(lastMessage.timestamp).getTime();
+    },
+
+     // Handle scroll in messages container
+     handleScroll() {
+        // If scrolled to top, load more messages
+        if (this.chatMessages && this.chatMessages.scrollTop === 0 && 
+            !this.isLoadingMessages && this.hasMoreMessages) {
+            this.loadMessages();
+        }
+    },
 };
+
+// Utility function to throttle scroll events
+function throttle(callback, delay) {
+    let lastCall = 0;
+    return function(...args) {
+        const now = new Date().getTime();
+        if (now - lastCall < delay) {
+            return;
+        }
+        lastCall = now;
+        return callback(...args);
+    };
+}
+
+// Utility function to debounce search input
+function debounce(callback, delay) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => callback(...args), delay);
+    };
+}
