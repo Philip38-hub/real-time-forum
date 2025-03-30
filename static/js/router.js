@@ -99,7 +99,7 @@ class Router {
             } finally {
                 store.setLoading(false);
             }
-        }, { authRequired: false });
+        }, { authRequired: true });
 
         // Login page
         this.addRoute('/login', () => {

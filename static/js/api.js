@@ -54,7 +54,10 @@ class Api {
     async login(email, password) {
         const response = await this.request('/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password }),
+            headers: {
+                'Content-Type': 'application/json' // Ensure the content type is set
+            }
         });
         store.setUser(response.user);
         return response;

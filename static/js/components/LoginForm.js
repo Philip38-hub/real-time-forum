@@ -1,6 +1,6 @@
 class LoginForm {
     constructor() {
-        this.container = document.getElementById('main-container');
+        this.container = document.querySelector('.container'); // Updated to target the entire container
     }
 
     render() {
