@@ -1,8 +1,7 @@
 class PostList {
     constructor() {
         this.container = document.getElementById('main-container');
-        this.render();
-
+        
         // Subscribe to posts changes
         store.subscribe((state) => {
             if (this.lastPosts !== state.posts) {
@@ -26,17 +25,23 @@ class PostList {
         const user = store.state.user;
         const posts = store.state.posts;
         const categoryTitle = this.getCategoryTitle();
+        
+        try {
+            this.container.innerHTML = `
+                <h1 id="postsHeading">${categoryTitle}</h1>
+                <div id="posts">
+                    ${Array.isArray(posts) && posts.length > 0
+                        ? posts.map(post => this.renderPost(post, user)).join('')
+                        : '<p>No posts available.</p>'}
+                </div>
+            `;
 
-        this.container.innerHTML = `
-            <h1 id="postsHeading">${categoryTitle}</h1>
-            <div id="posts">
-                ${posts.length ? posts.map(post => this.renderPost(post, user)).join('') : 
-                  '<p>No posts available.</p>'}
-            </div>
-        `;
-
-        // Add event listeners after rendering
-        this.addEventListeners();
+            // Add event listeners after rendering
+            this.addEventListeners();
+        } catch (error) {
+            console.error('Error rendering posts:', error);
+            this.container.innerHTML = '<p>Error rendering posts. Please try again.</p>';
+        }
     }
 
     renderPost(post, user) {
@@ -54,31 +59,41 @@ class PostList {
                 <p class="categories">Categories: <span>${post.Categories}</span></p>
                 
                 <div class="post-actions">
-                    <button class="like-button ${post.UserLiked ? 'active' : ''}" 
-                            onclick="postList.handleLike('${post.ID}', true)">
+                    <button class="like-button ${post.UserLiked ? 'active' : ''}">
                         <i class="fas fa-thumbs-up"></i> 
                         <span class="like-count">${post.LikeCount}</span>
                     </button>
-                    <button class="dislike-button ${post.UserDisliked ? 'active' : ''}" 
-                            onclick="postList.handleLike('${post.ID}', false)">
+                    <button class="dislike-button ${post.UserDisliked ? 'active' : ''}">
                         <i class="fas fa-thumbs-down"></i> 
                         <span class="dislike-count">${post.DislikeCount}</span>
                     </button>
-                    <button class="comment-button" onclick="postList.toggleComments('${post.ID}')">
+                    <button class="comment-button">
                         <i class="fas fa-comment"></i> Comments
                     </button>
                 </div>
 
                 <!-- Comments Section -->
                 <div class="comments-section" id="comments-${post.ID}" style="display: none;">
-                    ${comments.renderCommentSection(post.ID, post.Comments)}
+                    ${comments.renderCommentSection(post.ID, Array.isArray(post.Comments) ? post.Comments : [])}
                 </div>
             </div>
         `;
     }
 
     addEventListeners() {
-        // Add any additional event listeners if needed
+        this.container.querySelectorAll('.like-button').forEach(button => {
+            const postId = button.closest('.post').dataset.postId;
+            button.addEventListener('click', () => this.handleLike(postId, true));
+        });
+
+        this.container.querySelectorAll('.dislike-button').forEach(button => {
+            const postId = button.closest('.post').dataset.postId;
+            button.addEventListener('click', () => this.handleLike(postId, false));
+        });
+        this.container.querySelectorAll('.comment-button').forEach(button => {
+            const postId = button.closest('.post').dataset.postId;
+            button.addEventListener('click', () => this.toggleComments(postId));
+        });
     }
 
     async handleLike(postId, isLike) {
@@ -100,6 +115,3 @@ class PostList {
         commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
     }
 }
-
-// Create global reference for event handlers
-const postList = new PostList();

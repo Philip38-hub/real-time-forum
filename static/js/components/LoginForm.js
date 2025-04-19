@@ -60,14 +60,22 @@ class LoginForm {
             store.setLoading(true);
             store.setError(null);
 
+            // Wait for login and state update to complete
             const response = await api.login(
                 formData.get('email'),
                 formData.get('password')
             );
 
             if (response.success) {
-                store.setUser(response.user);
-                router.navigate('/', true);
+                // Ensure container is cleared before navigation
+                document.querySelector('.container').innerHTML = '';
+                
+                // Navigate after login and DOM cleanup
+                await new Promise(resolve => {
+                    router.navigate('/', true);
+                    // Give time for navigation to complete
+                    setTimeout(resolve, 100);
+                });
             } else {
                 store.setError(response.error || 'Login failed');
             }

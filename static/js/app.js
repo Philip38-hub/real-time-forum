@@ -1,8 +1,8 @@
 class App {
     constructor() {
-        // Initialize core components
+        // Initialize header
         this.header = new Header();
-        this.sidebar = new Sidebar();
+        this.header.render();
 
         // Add loading indicator
         this.setupLoadingIndicator();

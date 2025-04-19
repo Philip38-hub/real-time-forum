@@ -24,22 +24,28 @@ class Store {
     }
 
     notify() {
-        this.subscribers.forEach(callback => callback(this.state));
+        return new Promise(resolve => {
+            // Execute callbacks in next tick to ensure state is updated
+            setTimeout(() => {
+                this.subscribers.forEach(callback => callback(this.state));
+                resolve();
+            }, 0);
+        });
     }
 
-    setState(newState) {
+    async setState(newState) {
         this.state = { ...this.state, ...newState };
-        this.notify();
+        await this.notify();
     }
 
     // User actions
-    setUser(user) {
-        this.setState({ user });
+    async setUser(user) {
+        await this.setState({ user });
     }
 
     // Posts actions
-    setPosts(posts) {
-        this.setState({ posts });
+    async setPosts(posts) {
+        await this.setState({ posts: Array.isArray(posts) ? posts : [] });
     }
 
     addPost(post) {

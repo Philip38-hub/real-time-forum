@@ -3,7 +3,7 @@ class Api {
         this.baseUrl = ''; // Same origin for API calls
     }
 
-    async request(endpoint, options = {}) {
+    async request(endpoint, options = {}) {      
         const config = {
             ...options,
             headers: {
@@ -19,8 +19,7 @@ class Api {
         }
 
         try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, config);
-            
+            const response = await fetch(`${this.baseUrl}${endpoint}`, config);            
             // For JSON responses, parse and check for errors
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -56,10 +55,13 @@ class Api {
             method: 'POST',
             body: JSON.stringify({ email, password }),
             headers: {
-                'Content-Type': 'application/json' // Ensure the content type is set
+                'Content-Type': 'application/json'
             }
         });
-        store.setUser(response.user);
+        
+        if (response.success) {
+            await store.setUser(response.user);
+        }
         return response;
     }
 
@@ -78,8 +80,18 @@ class Api {
 
     // Post endpoints
     async getPosts() {
-        const response = await this.request('/api/posts');
-        return response.posts;
+        try {
+            const response = await this.request('/api/posts');
+            if (response && response.success && Array.isArray(response.posts)) {
+                return response.posts;
+            } else {
+                console.error('Invalid posts response format:', response);
+                return [];
+            }
+        } catch (error) {
+            console.error('Failed to fetch posts:', error);
+            return [];
+        }
     }
 
     async getPostsByCategory(category) {

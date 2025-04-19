@@ -73,6 +73,12 @@ class Router {
         const params = path.match(route.pattern).slice(1);
         
         try {
+            // For authenticated routes, ensure state is ready
+            if (route.authRequired) {
+                // Wait for next tick to ensure state updates are processed
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+            
             // Execute route handler
             await route.handler(...params);
         } catch (error) {
@@ -91,11 +97,49 @@ class Router {
         this.addRoute('/', async () => {
             store.setLoading(true);
             try {
-                const posts = await api.getPosts();
-                store.setPosts(posts);
-                new PostList().render();
+                // Clear and setup container first to avoid any leftover content
+                const container = document.querySelector('.container');
+                container.innerHTML = '';
+                
+                // Setup fresh container structure
+                container.innerHTML = `
+                    <aside class="sidebar" id="sidebar-container"></aside>
+                    <main id="main-container"></main>
+                `;
+
+                // Render sidebar first
+                const sidebar = new Sidebar();
+                sidebar.render();
+
+                try {
+                    // Load posts
+                    const posts = await api.getPosts();
+                    console.log('Posts loaded:', posts);
+
+                    if (!Array.isArray(posts)) {
+                        throw new Error('Invalid posts data received');
+                    }
+                    if (posts.length > 0) {
+                        await store.setPosts(posts);
+                        await new Promise(resolve => setTimeout(resolve, 0));
+
+                        // Create and render PostList
+                        const main = document.getElementById('main-container');
+                        const postList = new PostList();
+                        postList.render();
+                    }
+                } catch (error) {
+                    console.error('Failed to load posts:', error);
+                    document.getElementById('main-container').innerHTML = `
+                        <div class="error-message">
+                            <p>Failed to load posts. Please try again.</p>
+                            <p>Error: ${error.message}</p>
+                        </div>
+                    `;
+                }
             } catch (error) {
-                store.setError('Failed to load posts');
+                console.error('Route error:', error);
+                store.setError('An error occurred while loading the page');
             } finally {
                 store.setLoading(false);
             }

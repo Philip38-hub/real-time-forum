@@ -41,16 +41,18 @@ class Comments {
     }
 
     renderComment(comment) {
+        if (!comment || !comment.ID) return '';
+        
         return `
             <div class="comment" data-comment-id="${comment.ID}">
-                <div class="comment-content">${comment.Content}</div>
+                <div class="comment-content">${comment.Content || ''}</div>
                 <div class="comment-meta">
-                    <span class="comment-author">Posted by ${comment.Username}</span>
+                    <span class="comment-author">Posted by ${comment.Username || 'Anonymous'}</span>
                     <span class="comment-date">${this.formatDate(comment.CreatedAt)}</span>
                 </div>
                 ${this.user ? this.renderCommentActions(comment) : ''}
                 ${this.renderReplyForm(comment)}
-                ${comment.Replies && comment.Replies.length > 0 ? `
+                ${Array.isArray(comment.Replies) && comment.Replies.length > 0 ? `
                     <div class="replies">
                         ${comment.Replies.map(reply => this.renderComment(reply)).join('')}
                     </div>
@@ -60,20 +62,22 @@ class Comments {
     }
 
     renderCommentActions(comment) {
+        if (!comment || !comment.ID) return '';
+
         return `
             <div class="comment-actions">
-                <button class="like-button ${comment.UserLiked ? 'active' : ''}" 
+                <button class="like-button ${comment.UserLiked ? 'active' : ''}"
                         onclick="comments.handleLike('${comment.ID}', true)">
-                    <i class="fas fa-thumbs-up"></i> 
-                    <span class="like-count">${comment.LikeCount}</span>
+                    <i class="fas fa-thumbs-up"></i>
+                    <span class="like-count">${comment.LikeCount || 0}</span>
                 </button>
-                <button class="dislike-button ${comment.UserDisliked ? 'active' : ''}" 
+                <button class="dislike-button ${comment.UserDisliked ? 'active' : ''}"
                         onclick="comments.handleLike('${comment.ID}', false)">
-                    <i class="fas fa-thumbs-down"></i> 
-                    <span class="dislike-count">${comment.DislikeCount}</span>
+                    <i class="fas fa-thumbs-down"></i>
+                    <span class="dislike-count">${comment.DislikeCount || 0}</span>
                 </button>
                 <button class="reply-button" onclick="comments.toggleReplyForm('${comment.ID}')">
-                    Reply${comment.ReplyCount > 0 ? ` (${comment.ReplyCount})` : ''}
+                    Reply${comment.ReplyCount && comment.ReplyCount > 0 ? ` (${comment.ReplyCount})` : ''}
                 </button>
             </div>
         `;
