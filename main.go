@@ -18,9 +18,6 @@ func main() {
     }
 
     // Serve static files from the "static" directory
-    http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-    http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
-
     http.HandleFunc("/", handler)
 
     // Initialize the database and OAuth providers
@@ -37,19 +34,24 @@ func main() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-    // Serve SPA for root path
-    if r.URL.Path == "/" {
-        http.ServeFile(w, r, "static/index.html")
+    // Serve static files and uploads
+    if strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/uploads/") {
+        http.ServeFile(w, r, r.URL.Path[1:]) // remove leading '/'
         return
     }
-    
-    // API endpoints
+
+    // API endpoints (only for correct methods)
     if isAPIEndpoint(r.URL.Path) {
+        // Only handle /login as API for POST, otherwise serve SPA
+        if r.URL.Path == "/login" && r.Method != http.MethodPost {
+            http.ServeFile(w, r, "static/index.html")
+            return
+        }
         handleAPI(w, r)
         return
     }
 
-    // For all other routes, serve the SPA
+    // For all other routes, serve the SPA (index.html)
     http.ServeFile(w, r, "static/index.html")
 }
 

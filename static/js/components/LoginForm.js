@@ -35,7 +35,6 @@ class LoginForm {
                     <button type="submit">Login</button>
                 </form>
                 <p>Don't have an account? <a href="/register">Register here</a></p>
-                <p class="home-link"><a href="/">← Back to Homepage</a></p>
             </div>
         `;
 

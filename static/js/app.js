@@ -17,13 +17,17 @@ class App {
     async initializeApp() {
         // Initialize router immediately but don't handle routes yet
         router.init();
-        
-        // Check session in background
-        this.checkSession().catch(error => {
-            console.error('Session check failed:', error);
-        });
-        
-        // Handle initial route after everything is set up
+
+        // Load user from localStorage (already done in store constructor, but safe to call)
+        store.loadUser();
+
+        // Wait for user state to be loaded from localStorage (simulate async if needed)
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        // Optionally, validate session with backend (uncomment if you want to use checkSession)
+        // await this.checkSession();
+
+        // Now handle the initial route
         router.handleRoute();
     }
 

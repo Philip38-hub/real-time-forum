@@ -13,6 +13,7 @@ class Store {
             error: null
         };
         this.subscribers = [];
+        this.loadUser();
     }
 
     subscribe(callback) {
@@ -41,6 +42,19 @@ class Store {
     // User actions
     async setUser(user) {
         await this.setState({ user });
+        if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+        } else {
+            localStorage.removeItem('user');
+        }
+    }
+
+    // Load user from localStorage
+    loadUser() {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+            this.state.user = JSON.parse(userData);
+        }
     }
 
     // Posts actions
