@@ -114,7 +114,6 @@ class Router {
                 try {
                     // Load posts
                     const posts = await api.getPosts();
-                    console.log('Posts loaded:', posts);
 
                     if (!Array.isArray(posts)) {
                         throw new Error('Invalid posts data received');
@@ -173,6 +172,16 @@ class Router {
             }
             const profile = new Profile();
             profile.render();
+        }, { authRequired: true });
+
+        // Create Post page
+        this.addRoute('/create-post', () => {
+            const main = document.getElementById('main-container');
+            if (main) {
+                main.innerHTML = '';
+            }
+            const postForm = new PostForm();
+            postForm.render();
         }, { authRequired: true });
 
         // Category filter

@@ -94,12 +94,8 @@ class PostForm {
         if (form) {
             form.remove();
         }
-
-        // Show the posts section
-        const posts = document.getElementById('posts');
-        const postsHeading = document.getElementById('postsHeading');
-        if (posts) posts.style.display = 'block';
-        if (postsHeading) postsHeading.style.display = 'block';
+        console.log('Navigating to home page');
+        router.navigate('/', true);
     }
 }
 
