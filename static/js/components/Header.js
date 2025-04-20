@@ -29,18 +29,27 @@ class Header {
                             person
                         </a>
                     </div>
-                    <a href="#" class="auth-button create-post" onclick="header.toggleCreatePost()">
+                    <a href="#" class="auth-button create-post">
                         Create Post
                     </a>
-                    <a href="#" class="logout-icon" onclick="header.handleLogout(event)" title="Logout">
+                    <a href="#" class="logout-icon" title="Logout">
                         <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A7C8C; margin-top: 10px;"></i>
                     </a>
                 ` : `
-                    <a href="/login" class="auth-button login">Login</a>
                     <a href="/register" class="auth-button register">Register</a>
                 `}
             </nav>
         `;
+        // Attach event handler for logout button
+        const logoutBtn = this.container.querySelector('.logout-icon');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+        }
+        // Attach event handler for create post button
+        const createPostBtn = this.container.querySelector('.create-post');
+        if (createPostBtn) {
+            createPostBtn.addEventListener('click', this.toggleCreatePost.bind(this));
+        }
     }
 
     toggleMenu() {
@@ -62,7 +71,7 @@ class Header {
             return;
         }
 
-        new PostForm().render();
+        router.navigate('/create-post');
     }
 
     async handleLogout(event) {
@@ -70,7 +79,7 @@ class Header {
         try {
             store.setLoading(true);
             await api.logout();
-            router.navigate('/', true);
+            router.navigate('/login', true);
         } catch (error) {
             store.setError('Logout failed. Please try again.');
         } finally {
