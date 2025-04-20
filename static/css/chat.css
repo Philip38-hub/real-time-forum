@@ -2,68 +2,97 @@
 .chat-container {
     position: fixed;
     bottom: 0;
+    top: 120px;
     right: 20px;
-    width: 300px;
-    height: 450px;
+    width: 500px;
+    height: calc(100vh - 60px);
     background-color: #fff;
-    border-radius: 10px 10px 0 0;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    border-radius: 0 0 10px 0;
+    border-left: 1px solid #ddd;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
     overflow: hidden;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
+/* Remove these properties as they're no longer needed */
 .chat-container.minimized {
-    height: 40px;
+    height: calc(100vh - 60px);
 }
 
-/* Chat toggle button */
+/* Hide the chat toggle button as it's no longer needed */
 .chat-toggle {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    background-color: #4A7C8C;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    z-index: 999;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: none;
 }
 
-.chat-toggle i {
-    font-size: 20px;
+/* Adjust main content to create better balance */
+.main-content {
+    max-width: 1200px; /* Set maximum width for better readability */
+    margin: 0 370px 0 auto; /* Changed from just margin-right to center content with space for chat */
+    padding: 20px;
+    width: calc(100% - 370px); /* Ensure content doesn't overflow */
 }
 
-.chat-toggle .unread-count {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background-color: #ff4d4f;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 12px;
+/* Posts container adjustments */
+#posts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    width: 100%;
+}
+
+.post {
+    width: 100%;
+    margin: 0;
+}
+
+/* Responsive design */
+@media (max-width: 1400px) {
+    .main-content {
+        margin: 0 360px 0 10px;
+        width: calc(100% - 370px);
+    }
+}
+
+@media (max-width: 1024px) {
+    .chat-container {
+        display: none;
+    }
+    
+    .main-content {
+        margin: 0 auto;
+        width: 100%;
+        padding: 20px;
+    }
+    
+    .chat-toggle {
+        display: flex;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #4A7C8C;
+        color: white;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+
+    .chat-toggle:hover {
+        background-color: #3d6975;
+    }
 }
 
 /* Chat sidebar */
 .chat-sidebar {
-    flex: 1;
-    background-color: #f5f5f5;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
     width: 100%;
+    background-color: #f5f5f5;
+    border-right: 1px solid #eee;
 }
 
 .chat-sidebar h3 {
@@ -164,6 +193,7 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
+    background-color: #fff;
 }
 
 .chat-header {
@@ -200,12 +230,13 @@
 
 .chat-messages {
     flex: 1;
-    padding: 10px;
+    padding: 15px;
     overflow-y: auto;
     background-color: #f9f9f9;
 }
 
 .message {
+    max-width: 85%;
     margin-bottom: 15px;
     display: flex;
     flex-direction: column;
@@ -245,8 +276,8 @@
 }
 
 .chat-form-container {
-    padding: 10px;
-    border-top: 1px solid #ddd;
+    padding: 15px;
+    border-top: 1px solid #eee;
 }
 
 .chat-form-container form {
@@ -255,9 +286,10 @@
 
 .chat-form-container input {
     flex: 1;
-    padding: 8px;
+    padding: 12px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 20px;
+    background-color: #f8f9fa;
     margin-right: 5px;
 }
 
@@ -265,8 +297,8 @@
     background-color: #4A7C8C;
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 8px 12px;
+    border-radius: 20px;
+    padding: 12px 15px;
     cursor: pointer;
 }
 
