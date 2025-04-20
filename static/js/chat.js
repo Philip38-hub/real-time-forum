@@ -131,28 +131,9 @@ const Chat = {
         }
     },
     
-    toggleChatContainer() {
-        if (this.chatContainer) {
-            this.chatContainer.classList.toggle('hidden');
-            
-            if (!this.chatContainer.classList.contains('hidden')) {
-                this.fetchUsers(); // Reload users when opening chat
-            }
-        }
-    },
-    
-    minimizeChat() {
-        if (this.chatMain) {
-            this.chatMain.classList.toggle('minimized');
-        }
-    },
-    
-    closeChat() {
-        if (this.chatMain) {
-            this.chatMain.classList.add('hidden');
-        }
-        this.currentChatUserId = null;
-    },
+    // toggleChatContainer()
+    // minimizeChat()
+    // closeChat()
     
     async fetchUsers() {
         try {

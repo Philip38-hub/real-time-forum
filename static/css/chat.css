@@ -278,6 +278,7 @@
 .chat-form-container {
     padding: 15px;
     border-top: 1px solid #eee;
+    margin-bottom: 60px;
 }
 
 .chat-form-container form {
