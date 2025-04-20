@@ -47,10 +47,7 @@ const Chat = {
 
     //    Initialize DOM elements
     initElements() {
-        this.chatToggle = document.getElementById('chat-toggle');
         this.chatContainer = document.getElementById('chat-container');
-        this.minimizeBtn = document.getElementById('minimize-chat');
-        this.closeBtn = document.getElementById('close-chat');
         this.chatMain = document.getElementById('chat-main');
         this.usersList = document.getElementById('users-list');
         this.chatMessages = document.getElementById('chat-messages');
