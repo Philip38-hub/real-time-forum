@@ -15,25 +15,44 @@ const Chat = {
     hasMoreMessages: true,
 
     async initializeChat() {
+        logger.info('Starting chat initialization...');
         try {
             // Fetch user profile data from the backend
-            const response = await fetch('/api/current-user', { credentials: 'include' }); // Include cookies
-            if (!response.ok) {
-                throw new Error('Failed to fetch user profile');
+            const response = await fetch('/api/current-user', { 
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            logger.info('Profile fetch response status:', response.status);
+            
+            const data = await response.json();
+            logger.info('Server response:', data);
+
+            if (!response.ok || !data.authenticated) {
+                throw new Error(data.error || `Authentication failed: ${response.status}`);
             }
 
-            const userInfo = await response.json();
+            if (!data.userId || !data.username) {
+                throw new Error('Invalid user info received');
+            }
 
             // Assign globally
-            this.currentUserId = userInfo.userId; 
-            this.currentUsername = userInfo.username;
+            this.currentUserId = data.userId; 
+            this.currentUsername = data.username;
 
-            console.log('User profile loaded:', userInfo);
+            logger.info('User profile loaded:', {
+                userId: this.currentUserId,
+                username: this.currentUsername
+            });
 
             // Initialize chat functionality
             this.init();
+            
+            return true;
         } catch (error) {
-            console.error('Error initializing chat:', error);
+            logger.error('Error initializing chat:', error);
         }
     },
     
@@ -235,6 +254,7 @@ const Chat = {
         
         try {
             this.isLoadingMessages = true;
+            logger.info('Loading messages page:', this.page);
             
             // Show loading indicator
             const loadingEl = document.createElement('div');
@@ -255,14 +275,25 @@ const Chat = {
                 if (!this.messages[this.currentChatUserId]) {
                     this.messages[this.currentChatUserId] = [];
                 }
+
+                if (this.page === 1) {
+                    // First page: messages should be newest to oldest (reversed)
+                    const reversedMessages = [...messages].reverse();
+                    this.messages[this.currentChatUserId] = reversedMessages;
+                    this.renderMessages(reversedMessages); 
+                } else {
+                    // Subsequent pages: messages come in oldest to newest order
+                    // Reverse them before prepending to maintain correct chronological order
+                    const reversedMessages = [...messages].reverse();
+                    this.messages[this.currentChatUserId] = [
+                        ...reversedMessages,
+                        ...this.messages[this.currentChatUserId]
+                    ];
+                    this.renderMessages(reversedMessages, true); 
+                }              
                 
-                // Add messages to the beginning of the array
-                this.messages[this.currentChatUserId] = [
-                    ...messages,
-                    ...this.messages[this.currentChatUserId]
-                ];
-                this.renderMessages(messages, true); // Render messages
-                this.page++; // Increment page for next load
+                this.page++;
+                logger.info('Successfully loaded messages page:', this.page - 1);
             }
         } catch (error) {
             logger.error('Error loading messages:', error);
@@ -508,7 +539,7 @@ const Chat = {
      // Handle scroll in messages container
      handleScroll() {
         // If scrolled to top, load more messages
-        if (this.chatMessages && this.chatMessages.scrollTop === 0 && 
+        if (this.chatMessages && this.chatMessages.scrollTop < 50 && 
             !this.isLoadingMessages && this.hasMoreMessages) {
             this.loadMessages();
         }
