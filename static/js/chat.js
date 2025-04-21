@@ -340,16 +340,20 @@ const Chat = {
             const formattedDate = date.toLocaleString();
             const sender = msg.senderName || (isSent ? this.currentUsername : this.getChatUserName());
             
+            // Only show read status for sent messages
+            const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
+            
             messageElement.innerHTML = `
                 <div class="message-content">${msg.content}</div>
                 <div class="message-info">
                     ${sender} • ${formattedDate}
+                    ${readStatus}
                 </div>
             `;
             
             fragment.appendChild(messageElement);
         });
-        
+
         if (prepend) {
             // Insert at the beginning
             this.chatMessages.prepend(fragment);
@@ -359,6 +363,14 @@ const Chat = {
             this.chatMessages.appendChild(fragment);
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         }
+    },
+
+    getReadStatusHtml(isRead) {
+        return `
+            <span class="message-status ${isRead ? 'read' : ''}">
+                <i class="fas fa-check"></i><i class="fas fa-check second-check"></i>
+            </span>
+        `;
     },
     
     getChatUserName() {
@@ -538,14 +550,13 @@ const Chat = {
     },
     
     markMessageAsRead(data) {
-        // Update UI to show message has been read
-        const userElement = document.querySelector(`.user[data-user-id="${data.readerId}"]`);
-        if (!userElement) return;
-        
-        const unreadElement = userElement.querySelector('.unread-count');
-        if (unreadElement) {
-            unreadElement.remove();
-        }
+        const messageElements = document.querySelectorAll(`.message[data-message-id]`);
+        messageElements.forEach(element => {
+            const statusElement = element.querySelector('.message-status');
+            if (statusElement) {
+                statusElement.classList.add('read');
+            }
+        });
     },
      // Get last message time for a user (for sorting)
      getLastMessageTime(userId) {
