@@ -331,6 +331,43 @@
     font-style: italic;
 }
 
+.message-status {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.message-status .fa-check {
+    color: #8e8e8e;
+}
+
+.message-status .second-check {
+    margin-left: -4px;
+}
+
+.message-status.read .fa-check {
+    color: #2196F3;  /* Telegram blue */
+}
+
+/* Adjust message layout */
+.message.sent .message-info {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    color: #8e8e8e;
+    font-size: 12px;
+}
+
+.message.received .message-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #8e8e8e;
+    font-size: 12px;
+}
+
 /* Helper classes */
 .hidden {
     display: none !important;
