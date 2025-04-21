@@ -148,11 +148,12 @@
 }
 
 .users-list li {
-    padding: 10px;
+    padding: 8px 12px;
     border-bottom: 1px solid #eee;
     cursor: pointer;
     display: flex;
     align-items: center;
+    gap: 10px;
 }
 
 .users-list li:hover {
@@ -176,14 +177,29 @@
 
 .user-name {
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .unread-indicator {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #ff4d4f;
-    margin-left: 5px;
+    background-color: #4A7C8C; 
+    color: white;
+    border-radius: 12px;
+    padding: 1px 7px;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto; 
+}
+
+/* Hover effect */
+.user:hover .unread-indicator {
+    background-color: #3d6975; 
 }
 
 /* Chat main area */
