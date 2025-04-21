@@ -304,25 +304,37 @@ func HandleReadReceipt(content interface{}, userId string) {
 		return
 	}
 
-	messageId, ok := contentMap["messageId"].(float64)
+	senderId, ok := contentMap["senderId"].(string)
 	if !ok {
 		return
 	}
 
-	otherUserId, ok := contentMap["senderId"].(string)
-	if !ok {
+	// readerId, ok := contentMap["readerId"].(string)
+	// if !ok {
+	// 	return
+	// }
+
+	// Mark  all messages from sender to reader as read in database
+	query := `UPDATE private_messages
+				SET is_read = true
+				WHERE sender_id = ? AND receiver_id = ? AND is_read = false`
+
+	stmt, err := db.Prepare(query)
+	if err != nil {
+		log.Printf("Error preparing statement: %v", err)
 		return
 	}
+	defer stmt.Close()
 
-	// Mark message as read in database
-	err := MarkMessageAsRead(int64(messageId))
+	_, err = stmt.Exec(senderId, userId)
 	if err != nil {
 		log.Printf("Error marking message as read: %v", err)
+		return
 	}
 
 	// Notify sender that message was read
-	SendToUser(otherUserId, "readReceipt", map[string]interface{}{
-		"messageId": messageId,
-		"userId":    userId,
+	SendToUser(senderId, "readReceipt", map[string]interface{}{
+		"readerId": userId,
+		"senderId": senderId,
 	})
 }
