@@ -246,89 +246,57 @@
 
 .chat-messages {
     flex: 1;
-    padding: 15px;
+    padding: 20px;
     overflow-y: auto;
-    background-color: #f9f9f9;
+    background-color: #edeef0;  /* Telegram-like background */
 }
 
 .message {
-    max-width: 85%;
+    /* max-width: 85%; */
     margin-bottom: 15px;
     display: flex;
-    flex-direction: column;
+    animation: fadeIn 0.2s ease-in;
 }
 
 .message.outgoing {
-    align-items: flex-end;
+    justify-content: flex-end;
 }
 
-.message.incoming {
-    align-items: flex-start;
+.message-bubble {
+    padding: 7px 13px;
+    border-radius: 12px;
+    position: relative;
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+}
+
+.message.incoming .message-bubble {
+    background-color: #ffffff;
+    border-top-left-radius: 4px;
+}
+
+.message.outgoing .message-bubble {
+    background-color: #eeffde;  /* Telegram's green tint for sent messages */
+    border-top-right-radius: 4px;
 }
 
 .message-content {
-    max-width: 70%;
-    padding: 10px;
-    border-radius: 10px;
+    font-size: 14px;
+    line-height: 19px;
+    color: #303030;
+    margin-right: 40px;  /* Space for time/status */
     word-wrap: break-word;
 }
 
-.message.outgoing .message-content {
-    background-color: #4A7C8C;
-    color: white;
-    border-top-right-radius: 0;
-}
-
-.message.incoming .message-content {
-    background-color: #e9e9e9;
-    color: #333;
-    border-top-left-radius: 0;
-}
-
-.message-info {
-    font-size: 12px;
-    color: #888;
-    margin-top: 5px;
-}
-
-.chat-form-container {
-    padding: 15px;
-    border-top: 1px solid #eee;
-    margin-bottom: 60px;
-}
-
-.chat-form-container form {
+.message-meta {
     display: flex;
-}
-
-.chat-form-container input {
-    flex: 1;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 20px;
-    background-color: #f8f9fa;
-    margin-right: 5px;
-}
-
-.send-btn {
-    background-color: #4A7C8C;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 12px 15px;
-    cursor: pointer;
-}
-
-.send-btn:hover {
-    background-color: #3d6975;
-}
-
-/* Loading indicator for messages */
-.loading-messages {
-    text-align: center;
-    padding: 10px;
-    color: #888;
-    font-style: italic;
+    align-items: center;
+    position: absolute;
+    bottom: 7px;
+    right: 8px;
+    color: #8e8e8e;
+    font-size: 11px;
+    line-height: 11px;
+    white-space: nowrap;
 }
 
 .message-status {
@@ -339,6 +307,7 @@
 }
 
 .message-status .fa-check {
+    font-size: 11px;
     color: #8e8e8e;
 }
 
@@ -347,23 +316,81 @@
 }
 
 .message-status.read .fa-check {
-    color: #2196F3;  /* Telegram blue */
+    color: #53bdeb;  /* Telegram's blue */
 }
 
-/* Adjust message layout */
-.message.sent .message-info {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 4px;
-    color: #8e8e8e;
-    font-size: 12px;
+/* Animation for new messages */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.message.received .message-info {
+/* Message groups - add margin between messages from different times */
+.message + .message {
+    margin-top: 1px;
+}
+
+.message:not(.outgoing) + .message.outgoing,
+.message.outgoing + .message:not(.outgoing) {
+    margin-top: 12px;
+}
+
+/* Chat input styling */
+.chat-form-container {
+    padding: 10px 20px;
+    background: #fff;
+    border-top: 1px solid #e8e8e8;
+}
+
+.chat-form-container form {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 10px;
+    margin-bottom: 60px;
+}
+
+.chat-form-container input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid #ddd;
+    border-radius: 18px;
+    font-size: 15px;
+    background: #fff;
+}
+
+.chat-form-container input:focus {
+    outline: none;
+    border-color: #c8c8c8;
+}
+
+.send-btn {
+    background-color: #53bdeb;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.send-btn:hover {
+    background-color: #3d6975;
+}
+
+/* Loading indicator */
+.loading-messages {
+    text-align: center;
+    padding: 8px;
     color: #8e8e8e;
     font-size: 12px;
 }
