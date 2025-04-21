@@ -159,7 +159,16 @@ const Chat = {
             const response = await api.fetchUsers();
             if (response.success) {
                 this.users = response.users;
+                
+                // Initialize unread counts from server data
+                response.users.forEach(user => {
+                    if (user.unread > 0) {
+                        this.unreadMessages[user.id] = user.unread;
+                    }
+                });
+                
                 this.renderUsers();
+                this.updateUnreadCount(); // Update the total unread count
             } else {
                 logger.error('Failed to fetch users:', response.message);
             }
@@ -244,8 +253,20 @@ const Chat = {
         // Reset pagination
         this.page = 1;
         this.hasMoreMessages = true;
+        
         await this.loadMessages(); // Load messages
-        this.markMessagesAsRead(user.id); // Mark messages as read
+
+        // Mark unread messages as read
+        if (this.unreadMessages[user.id] && this.unreadMessages[user.id] > 0) {
+            // Send read receipt via WebSocket
+            webSocketManager.sendMessage('readReceipt', {
+                readerId: this.currentUserId,
+                senderId: user.id
+            });
+            
+            this.markMessagesAsRead(user.id); // This will handle UI updates
+        }
+
         if (this.chatInput) this.chatInput.focus(); // Focus on input
     },
 
@@ -436,7 +457,7 @@ const Chat = {
                 readerId: this.currentUserId,
                 senderId: userId
             });
-            await UI.markMessageAsRead(userId); // Mark messages as read in UI
+            UI.markMessageAsRead(userId); // Mark messages as read in UI
         } catch (error) {
             logger.error('Error marking messages as read:', error);
         }
