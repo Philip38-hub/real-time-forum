@@ -332,24 +332,37 @@ const Chat = {
             const messageElement = document.createElement('div');
             const isSent = msg.senderId === this.currentUserId;
             
-            messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageElement.className = `message ${isSent ? 'outgoing' : 'incoming'}`;
             messageElement.dataset.messageId = msg.id;
             
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
-            const formattedDate = date.toLocaleString();
+            const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const sender = msg.senderName || (isSent ? this.currentUsername : this.getChatUserName());
             
             // Only show read status for sent messages
             const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
             
             messageElement.innerHTML = `
-                <div class="message-content">${msg.content}</div>
-                <div class="message-info">
-                    ${sender} • ${formattedDate}
-                    ${readStatus}
+                <div class="message-bubble">
+                    <div class="message-content">${msg.content}</div>
+                    <div class="message-meta">
+                       ${sender} • ${formattedDate}
+                        ${readStatus}
+                    </div>
                 </div>
             `;
+
+            // messageElement.innerHTML = `
+            //     <div class="message-sender">${sender}</div>
+            //     <div class="message-bubble">
+            //         <div class="message-content">${msg.content}</div>
+            //         <div class="message-meta">
+            //             • ${formattedDate}
+            //             ${readStatus}
+            //         </div>
+            //     </div>
+            // `;
             
             fragment.appendChild(messageElement);
         });
