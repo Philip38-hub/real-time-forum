@@ -3,9 +3,14 @@ const app = {
     isProcessing: false,
 
     // Initialize the application
-    init() {
+    async init() {
         webSocketManager.init();
-        Chat.init();
+        try {
+            await Chat.initializeChat();
+            logger.info('Chat initialization completed successfully');
+        } catch (error) {
+            logger.error('Chat initialization failed:', error);
+        }
         this.attachEventListeners();
         logger.info('Forum application initialized');
     },
