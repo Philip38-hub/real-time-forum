@@ -29,7 +29,7 @@ class Header {
                             person
                         </a>
                     </div>
-                    <a href="#" class="auth-button create-post">
+                    <a href="/create-post" class="auth-button create-post">
                         Create Post
                     </a>
                     <a href="#" class="logout-icon" title="Logout">
@@ -48,7 +48,10 @@ class Header {
         // Attach event handler for create post button
         const createPostBtn = this.container.querySelector('.create-post');
         if (createPostBtn) {
-            createPostBtn.addEventListener('click', this.toggleCreatePost.bind(this));
+            createPostBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                this.toggleCreatePost();
+            });
         }
     }
 

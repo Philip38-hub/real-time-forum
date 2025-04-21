@@ -66,7 +66,6 @@ func isAPIEndpoint(path string) bool {
         "/comment",
         "/comment/like",
         "/logout",
-        "/profile",
         "/auth/google/login",
         "/auth/google/callback",
         "/auth/github/login",

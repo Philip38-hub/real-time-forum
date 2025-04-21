@@ -91,54 +91,43 @@ class Router {
         this.notFoundHandler = handler;
     }
 
+    // Helper to setup main container and sidebar for most pages
+    setupContainer() {
+        const container = document.querySelector('.container');
+        if (!container) return;
+        container.innerHTML = `
+            <aside class="sidebar" id="sidebar-container"></aside>
+            <main id="main-container"></main>
+        `;
+        const sidebar = new Sidebar();
+        sidebar.render();
+    }
+
     // Helper method to initialize routes
     init() {
         // Home page
         this.addRoute('/', async () => {
+            this.setupContainer();
             store.setLoading(true);
             try {
-                // Clear and setup container first to avoid any leftover content
-                const container = document.querySelector('.container');
-                container.innerHTML = '';
-                
-                // Setup fresh container structure
-                container.innerHTML = `
-                    <aside class="sidebar" id="sidebar-container"></aside>
-                    <main id="main-container"></main>
-                `;
-
-                // Render sidebar first
-                const sidebar = new Sidebar();
-                sidebar.render();
-
                 try {
                     // Load posts
                     const posts = await api.getPosts();
-
                     if (!Array.isArray(posts)) {
                         throw new Error('Invalid posts data received');
                     }
                     if (posts.length > 0) {
                         await store.setPosts(posts);
-                        await new Promise(resolve => setTimeout(resolve, 0));
-
                         // Create and render PostList
-                        const main = document.getElementById('main-container');
                         const postList = new PostList();
                         postList.render();
+                    } else {
+                        document.getElementById('main-container').innerHTML = '<p>No posts found.</p>';
                     }
                 } catch (error) {
                     console.error('Failed to load posts:', error);
-                    document.getElementById('main-container').innerHTML = `
-                        <div class="error-message">
-                            <p>Failed to load posts. Please try again.</p>
-                            <p>Error: ${error.message}</p>
-                        </div>
-                    `;
+                    document.getElementById('main-container').innerHTML = '<p>Failed to load posts. Please try again.</p>';
                 }
-            } catch (error) {
-                console.error('Route error:', error);
-                store.setError('An error occurred while loading the page');
             } finally {
                 store.setLoading(false);
             }
@@ -165,10 +154,10 @@ class Router {
         }, { authRequired: false });
 
         // Profile page
-        this.addRoute('/profile', () => {
-            if (!store.state.user) {
-                this.navigate('/login', true);
-                return;
+        this.addRoute('/profile', async () => {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = '<main id="main-container"></main>';
             }
             const profile = new Profile();
             profile.render();
@@ -176,6 +165,7 @@ class Router {
 
         // Create Post page
         this.addRoute('/create-post', () => {
+            this.setupContainer();
             const main = document.getElementById('main-container');
             if (main) {
                 main.innerHTML = '';
@@ -206,7 +196,6 @@ class Router {
             }
         }, { authRequired: false });
         
-        // Routes are now initialized but handleRoute() will be called by App
     }
 }
 
