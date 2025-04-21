@@ -266,11 +266,7 @@ func HandlePrivateMessage(content interface{}, senderId string) {
 	SendToUser(receiverId, "privateMessage", message)
 
 	// Send confirmation back to sender
-	SendToUser(senderId, "messageSent", map[string]interface{}{
-		"messageId":  messageId,
-		"receiverId": receiverId,
-		"timestamp":  now,
-	})
+	SendToUser(senderId, "messageSent", message)
 }
 
 // HandleTypingIndicator processes typing indicators
@@ -309,15 +305,10 @@ func HandleReadReceipt(content interface{}, userId string) {
 		return
 	}
 
-	// readerId, ok := contentMap["readerId"].(string)
-	// if !ok {
-	// 	return
-	// }
-
-	// Mark  all messages from sender to reader as read in database
-	query := `UPDATE private_messages
-				SET is_read = true
-				WHERE sender_id = ? AND receiver_id = ? AND is_read = false`
+	// Mark messages as read in database
+	query := `UPDATE private_messages 
+			  SET is_read = true 
+			  WHERE sender_id = ? AND receiver_id = ? AND is_read = false`
 
 	stmt, err := db.Prepare(query)
 	if err != nil {
@@ -328,13 +319,14 @@ func HandleReadReceipt(content interface{}, userId string) {
 
 	_, err = stmt.Exec(senderId, userId)
 	if err != nil {
-		log.Printf("Error marking message as read: %v", err)
+		log.Printf("Error marking messages as read: %v", err)
 		return
 	}
 
-	// Notify sender that message was read
+	// Notify sender that messages were read
 	SendToUser(senderId, "readReceipt", map[string]interface{}{
 		"readerId": userId,
 		"senderId": senderId,
+		"timestamp": time.Now(),
 	})
 }
