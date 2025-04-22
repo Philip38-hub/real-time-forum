@@ -43,7 +43,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
     // API endpoints (only for correct methods)
     if isAPIEndpoint(r.URL.Path) {
         // Only handle /login as API for POST, otherwise serve SPA
-        if r.URL.Path == "/login" && r.Method != http.MethodPost {
+        if (r.URL.Path == "/login" || r.URL.Path == "/register") && r.Method != http.MethodPost {
             http.ServeFile(w, r, "static/index.html")
             return
         }
@@ -66,6 +66,7 @@ func isAPIEndpoint(path string) bool {
         "/comment",
         "/comment/like",
         "/logout",
+        "/api/profile",
         "/auth/google/login",
         "/auth/google/callback",
         "/auth/github/login",
@@ -102,7 +103,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
         handlers.CommentLikeHandler(w, r)
     case "/logout":
         handlers.LogoutHandler(w, r)
-    case "/profile":
+    case "/api/profile":
         handlers.ProfileHandler(w, r)
     // Google OAuth routes
     case "/auth/google/login":

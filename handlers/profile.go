@@ -40,10 +40,10 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
     // Send JSON response
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(map[string]interface{}{
-        "success": true,
-        "user": user,
-        "createdPosts": createdPosts,
-        "likedPosts": likedPosts,
+        "Username": user.Username,
+        "Email": user.Email,
+        "CreatedPosts": createdPosts,
+        "LikedPosts": likedPosts,
     })
 }
 

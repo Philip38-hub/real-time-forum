@@ -140,7 +140,7 @@ class Api {
 
     // Profile endpoints
     async getProfile() {
-        const response = await this.request('/profile');
+        const response = await this.request('/api/profile');
         return response;
     }
 
