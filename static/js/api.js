@@ -13,8 +13,8 @@ class Api {
             credentials: 'include'
         };
 
-        // Add Content-Type only if not FormData
-        if (!(options.body instanceof FormData)) {
+        // Add Content-Type only if not FormData or URLSearchParams
+        if (options.body && !(options.body instanceof FormData) && !(options.body instanceof URLSearchParams)) {
             config.headers['Content-Type'] = 'application/json';
         }
 
@@ -110,30 +110,40 @@ class Api {
 
     // Like/Dislike endpoints
     async togglePostLike(postId, isLike) {
+        const body = new URLSearchParams({
+            post_id: postId,
+            is_like: isLike
+        });
         const response = await this.request('/like', {
             method: 'POST',
-            body: JSON.stringify({ post_id: postId, is_like: isLike })
+            headers: {}, // Let fetch set Content-Type
+            body
         });
         return response;
     }
 
     async toggleCommentLike(commentId, isLike) {
+        const body = new URLSearchParams({
+            comment_id: commentId,
+            is_like: isLike
+        });
         const response = await this.request('/comment/like', {
             method: 'POST',
-            body: JSON.stringify({ comment_id: commentId, is_like: isLike })
+            headers: {}, // Let fetch set Content-Type
+            body
         });
         return response;
     }
 
     // Comment endpoints
     async createComment(postId, content, parentId = null) {
+        const params = { post_id: postId, content };
+        if (parentId) params.parent_id = parentId;
+        const body = new URLSearchParams(params);
         const response = await this.request('/comment', {
             method: 'POST',
-            body: JSON.stringify({
-                post_id: postId,
-                content,
-                parent_id: parentId
-            })
+            headers: {}, // Let fetch set Content-Type
+            body
         });
         return response;
     }

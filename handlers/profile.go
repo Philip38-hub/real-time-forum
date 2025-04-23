@@ -53,8 +53,8 @@ func getCreatedPosts(userID string) ([]Post, error) {
             p.id, p.title, p.content, p.image_path, 
             GROUP_CONCAT(pc.category) as categories,
             p.created_at,
-            COUNT(CASE WHEN l.is_like = 1 THEN 1 END) as like_count,
-            COUNT(CASE WHEN l.is_like = 0 THEN 1 END) as dislike_count
+            COUNT(DISTINCT CASE WHEN l.is_like = 1 THEN l.user_id END) as like_count,
+            COUNT(DISTINCT CASE WHEN l.is_like = 0 THEN l.user_id END) as dislike_count
         FROM posts p
         LEFT JOIN post_categories pc ON p.id = pc.post_id
         LEFT JOIN likes l ON p.id = l.post_id
@@ -97,8 +97,8 @@ func getLikedPosts(userID string) ([]Post, error) {
             GROUP_CONCAT(pc.category) as categories,
             u.username,
             p.created_at,
-            COUNT(CASE WHEN l2.is_like = 1 THEN 1 END) as like_count,
-            COUNT(CASE WHEN l2.is_like = 0 THEN 1 END) as dislike_count
+            COUNT(DISTINCT CASE WHEN l2.is_like = 1 THEN l2.user_id END) as like_count,
+            COUNT(DISTINCT CASE WHEN l2.is_like = 0 THEN l2.user_id END) as dislike_count
         FROM posts p
         JOIN likes l ON p.id = l.post_id AND l.user_id = ? AND l.is_like = 1
         LEFT JOIN post_categories pc ON p.id = pc.post_id

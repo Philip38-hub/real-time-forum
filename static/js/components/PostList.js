@@ -9,6 +9,8 @@ class PostList {
                 this.render();
             }
         });
+        // Bind event handler for event delegation
+        this.handleDelegatedClick = this.handleDelegatedClick.bind(this);
     }
 
     getCategoryTitle() {
@@ -35,9 +37,9 @@ class PostList {
                         : '<p>No posts available.</p>'}
                 </div>
             `;
-
-            // Add event listeners after rendering
-            this.addEventListeners();
+            // Add event delegation listener after rendering
+            this.container.removeEventListener('click', this.handleDelegatedClick); // Prevent duplicate listeners
+            this.container.addEventListener('click', this.handleDelegatedClick);
         } catch (error) {
             console.error('Error rendering posts:', error);
             this.container.innerHTML = '<p>Error rendering posts. Please try again.</p>';
@@ -80,38 +82,95 @@ class PostList {
         `;
     }
 
-    addEventListeners() {
-        this.container.querySelectorAll('.like-button').forEach(button => {
-            const postId = button.closest('.post').dataset.postId;
-            button.addEventListener('click', () => this.handleLike(postId, true));
-        });
-
-        this.container.querySelectorAll('.dislike-button').forEach(button => {
-            const postId = button.closest('.post').dataset.postId;
-            button.addEventListener('click', () => this.handleLike(postId, false));
-        });
-        this.container.querySelectorAll('.comment-button').forEach(button => {
-            const postId = button.closest('.post').dataset.postId;
-            button.addEventListener('click', () => this.toggleComments(postId));
-        });
+    // Event delegation handler
+    async handleDelegatedClick(event) {
+        const likeBtn = event.target.closest('.like-button');
+        const dislikeBtn = event.target.closest('.dislike-button');
+        const commentBtn = event.target.closest('.comment-button');
+        const postDiv = event.target.closest('.post');
+        if (!postDiv) return;
+        const postId = postDiv.dataset.postId;
+        if (likeBtn) {
+            event.preventDefault();
+            this.optimisticLike(postId, true, likeBtn);
+            return;
+        }
+        if (dislikeBtn) {
+            event.preventDefault();
+            this.optimisticLike(postId, false, dislikeBtn);
+            return;
+        }
+        if (commentBtn) {
+            event.preventDefault();
+            this.toggleComments(postId);
+            return;
+        }
     }
 
-    async handleLike(postId, isLike) {
+    // Optimistic like/dislike
+    async optimisticLike(postId, isLike, btnElem) {
         if (!store.state.user) {
             router.navigate('/login');
             return;
         }
-
+        // Optimistically update UI
+        const posts = store.state.posts;
+        const postIdx = posts.findIndex(p => String(p.ID) === String(postId));
+        if (postIdx === -1) return;
+        const post = posts[postIdx];
+        // Toggle logic: if already liked/disliked, undo; else, do
+        let newLikeCount = post.LikeCount;
+        let newDislikeCount = post.DislikeCount;
+        let newUserLiked = post.UserLiked;
+        let newUserDisliked = post.UserDisliked;
+        if (isLike) {
+            if (post.UserLiked) {
+                newLikeCount -= 1;
+                newUserLiked = false;
+            } else {
+                newLikeCount += 1;
+                newUserLiked = true;
+                if (post.UserDisliked) {
+                    newDislikeCount -= 1;
+                    newUserDisliked = false;
+                }
+            }
+        } else {
+            if (post.UserDisliked) {
+                newDislikeCount -= 1;
+                newUserDisliked = false;
+            } else {
+                newDislikeCount += 1;
+                newUserDisliked = true;
+                if (post.UserLiked) {
+                    newLikeCount -= 1;
+                    newUserLiked = false;
+                }
+            }
+        }
+        // Immediately update store
+        const updatedPost = { ...post, LikeCount: newLikeCount, DislikeCount: newDislikeCount, UserLiked: newUserLiked, UserDisliked: newUserDisliked };
+        store.updatePost(updatedPost);
+        // Try backend
+        console.log("Sending like/dislike request", { postId, isLike, user: store.state.user, ts: Date.now() });
         try {
             const response = await api.togglePostLike(postId, isLike);
-            store.updatePostLikes(postId, response.like_count, response.dislike_count);
+            // Use backend counts if different
+            if (response && (response.like_count !== newLikeCount || response.dislike_count !== newDislikeCount)) {
+                store.updatePostLikes(postId, response.like_count, response.dislike_count);
+            }
         } catch (error) {
+            // Rollback on failure
+            store.updatePost(post);
             store.setError('Failed to update like status');
         }
     }
 
+    // No need for addEventListeners anymore
     toggleComments(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
-        commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+        if (commentsSection) {
+            commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+        }
     }
 }

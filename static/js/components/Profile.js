@@ -50,7 +50,6 @@ class Profile {
         try {
             store.setLoading(true);
             const profileData = await api.getProfile();
-            console.log('profileData:', profileData);
             this.container.innerHTML = `
                 <header class="profile-header">
                     <div class="logo">
