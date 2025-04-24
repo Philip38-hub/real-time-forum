@@ -61,15 +61,15 @@ class PostList {
                 <p class="categories">Categories: <span>${post.Categories}</span></p>
                 
                 <div class="post-actions">
-                    <button class="like-button ${post.UserLiked ? 'active' : ''}">
-                        <i class="fas fa-thumbs-up"></i> 
-                        <span class="like-count">${post.LikeCount}</span>
+                    <button class="post-like-button ${post.UserLiked ? 'active' : ''}">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span class="post-like-count">${post.LikeCount}</span>
                     </button>
-                    <button class="dislike-button ${post.UserDisliked ? 'active' : ''}">
-                        <i class="fas fa-thumbs-down"></i> 
-                        <span class="dislike-count">${post.DislikeCount}</span>
+                    <button class="post-dislike-button ${post.UserDisliked ? 'active' : ''}">
+                        <i class="fas fa-thumbs-down"></i>
+                        <span class="post-dislike-count">${post.DislikeCount}</span>
                     </button>
-                    <button class="comment-button">
+                    <button class="post-comment-button">
                         <i class="fas fa-comment"></i> Comments
                     </button>
                 </div>
@@ -84,9 +84,9 @@ class PostList {
 
     // Event delegation handler
     async handleDelegatedClick(event) {
-        const likeBtn = event.target.closest('.like-button');
-        const dislikeBtn = event.target.closest('.dislike-button');
-        const commentBtn = event.target.closest('.comment-button');
+        const likeBtn = event.target.closest('.post-like-button');
+        const dislikeBtn = event.target.closest('.post-dislike-button');
+        const commentBtn = event.target.closest('.post-comment-button');
         const postDiv = event.target.closest('.post');
         if (!postDiv) return;
         const postId = postDiv.dataset.postId;
@@ -155,9 +155,12 @@ class PostList {
         console.log("Sending like/dislike request", { postId, isLike, user: store.state.user, ts: Date.now() });
         try {
             const response = await api.togglePostLike(postId, isLike);
+            // Convert snake_case to camelCase for consistency
+            const serverLikeCount = response.like_count;
+            const serverDislikeCount = response.dislike_count;
             // Use backend counts if different
-            if (response && (response.like_count !== newLikeCount || response.dislike_count !== newDislikeCount)) {
-                store.updatePostLikes(postId, response.like_count, response.dislike_count);
+            if (response && (serverLikeCount !== newLikeCount || serverDislikeCount !== newDislikeCount)) {
+                store.updatePostLikes(postId, serverLikeCount, serverDislikeCount);
             }
         } catch (error) {
             // Rollback on failure

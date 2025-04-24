@@ -1,11 +1,28 @@
 class Comments {
     constructor() {
         this.user = store.state.user;
+        this.posts = store.state.posts;
         
-        // Subscribe to user state changes
+        // Subscribe to state changes
         store.subscribe((state) => {
             if (this.user !== state.user) {
                 this.user = state.user;
+            }
+            if (this.posts !== state.posts) {
+                this.posts = state.posts;
+                // Re-render all comments when posts update
+                this.reRenderComments();
+            }
+        });
+    }
+
+    reRenderComments() {
+        const commentSections = document.querySelectorAll('.comments-section[id^="comments-"]');
+        commentSections.forEach(section => {
+            const postId = section.id.replace('comments-', '');
+            const post = this.posts.find(p => String(p.ID) === String(postId));
+            if (post && post.Comments) {
+                section.innerHTML = this.renderCommentSection(postId, post.Comments);
             }
         });
     }
@@ -66,15 +83,15 @@ class Comments {
 
         return `
             <div class="comment-actions">
-                <button class="like-button ${comment.UserLiked ? 'active' : ''}"
+                <button class="comment-like-button ${comment.UserLiked ? 'active' : ''}"
                         onclick="comments.handleLike('${comment.ID}', true)">
                     <i class="fas fa-thumbs-up"></i>
-                    <span class="like-count">${comment.LikeCount || 0}</span>
+                    <span class="comment-like-count">${comment.LikeCount || 0}</span>
                 </button>
-                <button class="dislike-button ${comment.UserDisliked ? 'active' : ''}"
+                <button class="comment-dislike-button ${comment.UserDisliked ? 'active' : ''}"
                         onclick="comments.handleLike('${comment.ID}', false)">
                     <i class="fas fa-thumbs-down"></i>
-                    <span class="dislike-count">${comment.DislikeCount || 0}</span>
+                    <span class="comment-dislike-count">${comment.DislikeCount || 0}</span>
                 </button>
                 <button class="reply-button" onclick="comments.toggleReplyForm('${comment.ID}')">
                     Reply${comment.ReplyCount && comment.ReplyCount > 0 ? ` (${comment.ReplyCount})` : ''}
@@ -147,17 +164,27 @@ class Comments {
             return;
         }
 
+        // Get comment and post before making the API call
+        const result = this.findComment(commentId);
+        if (!result) {
+            store.setError('Comment not found');
+            return;
+        }
+
         try {
-            store.setLoading(true);
+            // Make the API call immediately
             const response = await api.toggleCommentLike(commentId, isLike);
-            const comment = this.findComment(commentId);
-            if (comment) {
-                store.updateCommentLikes(comment.PostID, commentId, response.likeCount, response.dislikeCount);
-            }
+            
+            // Update the state with the server response
+            store.updateCommentLikes(
+                result.post.ID,
+                commentId,
+                response.likeCount,
+                response.dislikeCount,
+                isLike
+            );
         } catch (error) {
             store.setError('Failed to update comment like status');
-        } finally {
-            store.setLoading(false);
         }
     }
 
@@ -169,17 +196,20 @@ class Comments {
     }
 
     findComment(commentId, posts = store.state.posts) {
+        // Ensure consistent type comparison by converting to string
+        const targetId = String(commentId);
+        
         for (const post of posts) {
             if (!post.Comments) continue;
             
             for (const comment of post.Comments) {
-                if (comment.ID === commentId) {
-                    return comment;
+                if (String(comment.ID) === targetId) {
+                    return { comment, post };
                 }
                 if (comment.Replies) {
                     for (const reply of comment.Replies) {
-                        if (reply.ID === commentId) {
-                            return reply;
+                        if (String(reply.ID) === targetId) {
+                            return { comment: reply, post };
                         }
                     }
                 }

@@ -112,7 +112,7 @@ class Api {
     async togglePostLike(postId, isLike) {
         const body = new URLSearchParams({
             post_id: postId,
-            is_like: isLike
+            is_like: String(isLike)
         });
         const response = await this.request('/like', {
             method: 'POST',
@@ -125,7 +125,7 @@ class Api {
     async toggleCommentLike(commentId, isLike) {
         const body = new URLSearchParams({
             comment_id: commentId,
-            is_like: isLike
+            is_like: String(isLike)
         });
         const response = await this.request('/comment/like', {
             method: 'POST',

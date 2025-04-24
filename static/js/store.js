@@ -89,7 +89,7 @@ class Store {
     // Like/Dislike actions
     updatePostLikes(postId, likeCount, dislikeCount) {
         const updatedPosts = this.state.posts.map(post => {
-            if (post.ID === postId) {
+            if (String(post.ID) === String(postId)) {
                 return { ...post, LikeCount: likeCount, DislikeCount: dislikeCount };
             }
             return post;
@@ -97,12 +97,62 @@ class Store {
         this.setState({ posts: updatedPosts });
     }
 
-    updateCommentLikes(postId, commentId, likeCount, dislikeCount) {
+    updateCommentLikes(postId, commentId, likeCount, dislikeCount, isLike = null) {
+        const targetCommentId = String(commentId);
         const updatedPosts = this.state.posts.map(post => {
-            if (post.ID === postId) {
+            if (String(post.ID) === String(postId)) {
                 const updatedComments = post.Comments.map(comment => {
-                    if (comment.ID === commentId) {
-                        return { ...comment, LikeCount: likeCount, DislikeCount: dislikeCount };
+                    // Check if this is the target comment
+                    if (String(comment.ID) === targetCommentId) {
+                        const wasLiked = comment.UserLiked;
+                        const wasDisliked = comment.UserDisliked;
+                        let newUserLiked = wasLiked;
+                        let newUserDisliked = wasDisliked;
+
+                        if (isLike === true) {
+                            newUserLiked = !wasLiked;
+                            newUserDisliked = false;
+                        } else if (isLike === false) {
+                            newUserDisliked = !wasDisliked;
+                            newUserLiked = false;
+                        }
+
+                        return {
+                            ...comment,
+                            LikeCount: likeCount,
+                            DislikeCount: dislikeCount,
+                            UserLiked: newUserLiked,
+                            UserDisliked: newUserDisliked
+                        };
+                    }
+                    // Check in replies if this comment has any
+                    if (comment.Replies && Array.isArray(comment.Replies)) {
+                        const updatedReplies = comment.Replies.map(reply => {
+                            if (String(reply.ID) === targetCommentId) {
+                                const wasLiked = reply.UserLiked;
+                                const wasDisliked = reply.UserDisliked;
+                                let newUserLiked = wasLiked;
+                                let newUserDisliked = wasDisliked;
+
+                                if (isLike === true) {
+                                    newUserLiked = !wasLiked;
+                                    newUserDisliked = false;
+                                } else if (isLike === false) {
+                                    newUserDisliked = !wasDisliked;
+                                    newUserLiked = false;
+                                }
+
+                                return {
+                                    ...reply,
+                                    LikeCount: likeCount,
+                                    DislikeCount: dislikeCount,
+                                    UserLiked: newUserLiked,
+                                    UserDisliked: newUserDisliked
+                                };
+                            }
+                            return reply;
+                        });
+                        return { ...comment, Replies: updatedReplies };
                     }
                     return comment;
                 });
