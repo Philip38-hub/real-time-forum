@@ -18,15 +18,15 @@ const Chat = {
         logger.info('Starting chat initialization...');
         try {
             // Fetch user profile data from the backend
-            const response = await fetch('/api/current-user', { 
+            const response = await fetch('/api/current-user', {
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json'
                 }
             });
-            
+
             logger.info('Profile fetch response status:', response.status);
-            
+
             const data = await response.json();
             logger.info('Server response:', data);
 
@@ -39,7 +39,7 @@ const Chat = {
             }
 
             // Assign globally
-            this.currentUserId = data.userId; 
+            this.currentUserId = data.userId;
             this.currentUsername = data.username;
 
             logger.info('User profile loaded:', {
@@ -49,13 +49,13 @@ const Chat = {
 
             // Initialize chat functionality
             this.init();
-            
+
             return true;
         } catch (error) {
             logger.error('Error initializing chat:', error);
         }
     },
-    
+
     init() {
         this.initElements();
         this.fetchUsers();
@@ -78,7 +78,7 @@ const Chat = {
         this.unreadCountElement = document.getElementById('unread-count');
         this.typingIndicator = document.getElementById('typing-indicator');
     },
-    
+
     // Register WebSocket message handlers for chat-related messages
     registerWebSocketHandlers() {
         // Handle private messages
@@ -87,21 +87,19 @@ const Chat = {
                 this.handleIncomingMessage(content);
             }
         });
-        
+
         // Handle typing indicators
         webSocketManager.registerHandler('typingIndicator', (content) => {
-            if (content.receiverId === this.currentUserId) {
-                this.showTypingIndicator(content);
-            }
+            this.showTypingIndicator(content);
         });
-        
+
         // Handle read receipts
         webSocketManager.registerHandler('readReceipt', (content) => {
             if (content.senderId === this.currentUserId) {
                 this.markMessageAsRead(content);
             }
         });
-        
+
         // Handle user status updates
         webSocketManager.registerHandler('userStatus', (content) => {
             this.updateUserStatus(content.userId, content.online);
@@ -112,61 +110,61 @@ const Chat = {
             logger.info('Message delivered:', content.messageId);
         });
     },
-    
+
     attachEventListeners() {
         // Chat toggle button
         if (this.chatToggle) {
             this.chatToggle.addEventListener('click', this.toggleChatContainer.bind(this));
         }
-        
+
         // Minimize chat button
         if (this.minimizeBtn) {
             this.minimizeBtn.addEventListener('click', this.minimizeChat.bind(this));
         }
-        
+
         // Close chat button
         if (this.closeBtn) {
             this.closeBtn.addEventListener('click', this.closeChat.bind(this));
         }
-        
+
         // Chat form submission
         if (this.chatForm) {
             this.chatForm.addEventListener('submit', this.handleMessageSubmit.bind(this));
         }
-        
+
         // Typing indicator
         if (this.chatInput) {
             this.chatInput.addEventListener('input', this.handleTyping.bind(this));
         }
-        
+
         // Load more messages when scrolling up
         if (this.chatMessages) {
             this.chatMessages.addEventListener('scroll', throttle(() => this.handleScroll(), 500));
         }
-        
+
         // Filter users
         if (this.userSearch) {
             this.userSearch.addEventListener('input', debounce((e) => this.filterUsers(e.target.value), 300));
         }
     },
-    
+
     // toggleChatContainer()
     // minimizeChat()
     // closeChat()
-    
+
     async fetchUsers() {
         try {
             const response = await api.fetchUsers();
             if (response.success) {
                 this.users = response.users;
-                
+
                 // Initialize unread counts from server data
                 response.users.forEach(user => {
                     if (user.unread > 0) {
                         this.unreadMessages[user.id] = user.unread;
                     }
                 });
-                
+
                 this.renderUsers();
                 this.updateUnreadCount(); // Update the total unread count
             } else {
@@ -176,54 +174,54 @@ const Chat = {
             logger.error('Error fetching users:', error);
         }
     },
-    
+
     renderUsers() {
         if (!this.usersList) return;
-        
+
         this.usersList.innerHTML = ''; // Clear existing users
-    
-         // Sort users: first by last message time, then alphabetically
-         const sortedUsers = [...this.users].sort((a, b) => {
+
+        // Sort users: first by last message time, then alphabetically
+        const sortedUsers = [...this.users].sort((a, b) => {
             // First check if there are messages
             const aLastMessageTime = this.getLastMessageTime(a.id);
             const bLastMessageTime = this.getLastMessageTime(b.id);
-            
+
             // If both have messages, sort by most recent
             if (aLastMessageTime && bLastMessageTime) {
                 return bLastMessageTime - aLastMessageTime;
             }
-            
+
             // If only one has messages, prioritize that one
             if (aLastMessageTime) return -1;
             if (bLastMessageTime) return 1;
-            
+
             // If neither has messages, sort alphabetically
             return a.nickname.localeCompare(b.nickname);
         });
-    
+
         sortedUsers.forEach(user => {
             const userElement = document.createElement('li');
             userElement.className = 'user';
             userElement.dataset.userId = user.id;
-            
+
             const hasUnread = this.unreadMessages[user.id] && this.unreadMessages[user.id] > 0;
-            
+
             userElement.innerHTML = `
                 <span class="user-status-indicator ${user.online ? 'online' : 'offline'}"></span>
                 <span class="user-name">${user.nickname}</span>
                 ${hasUnread ? `<span class="unread-indicator">${this.unreadMessages[user.id]}</span>` : ''}
             `;
-    
+
             userElement.addEventListener('click', () => this.openChat(user));
             this.usersList.appendChild(userElement);
         });
     },
-    
-   // Filter users by search term
-   filterUsers(searchTerm) {
+
+    // Filter users by search term
+    filterUsers(searchTerm) {
         const items = this.usersList.querySelectorAll('li');
         const lowerSearchTerm = searchTerm.toLowerCase();
-        
+
         items.forEach(item => {
             const username = item.querySelector('.user-name').textContent.toLowerCase();
             if (username.includes(lowerSearchTerm)) {
@@ -249,11 +247,11 @@ const Chat = {
 
         // Clear messages area
         if (this.chatMessages) this.chatMessages.innerHTML = '';
-        
+
         // Reset pagination
         this.page = 1;
         this.hasMoreMessages = true;
-        
+
         await this.loadMessages(); // Load messages
 
         // Mark unread messages as read
@@ -263,7 +261,7 @@ const Chat = {
                 readerId: this.currentUserId,
                 senderId: user.id
             });
-            
+
             this.markMessagesAsRead(user.id); // This will handle UI updates
         }
 
@@ -272,26 +270,26 @@ const Chat = {
 
     async loadMessages() {
         if (!this.currentChatUserId || this.isLoadingMessages || !this.hasMoreMessages) return;
-        
+
         try {
             this.isLoadingMessages = true;
             logger.info('Loading messages page:', this.page);
-            
+
             // Show loading indicator
             const loadingEl = document.createElement('div');
             loadingEl.className = 'loading-messages';
             loadingEl.textContent = 'Loading messages...';
             this.chatMessages.prepend(loadingEl);
-            
+
             const response = await api.fetchMessages(this.currentChatUserId, this.page);
-            
+
             // Remove loading indicator
             loadingEl.remove();
-            
+
             if (response.success) {
                 const messages = response.messages || [];
                 this.hasMoreMessages = messages.length === 10; // Check if we have more messages
-                
+
                 // Store messages
                 if (!this.messages[this.currentChatUserId]) {
                     this.messages[this.currentChatUserId] = [];
@@ -301,7 +299,7 @@ const Chat = {
                     // First page: messages should be newest to oldest (reversed)
                     const reversedMessages = [...messages].reverse();
                     this.messages[this.currentChatUserId] = reversedMessages;
-                    this.renderMessages(reversedMessages); 
+                    this.renderMessages(reversedMessages);
                 } else {
                     // Subsequent pages: messages come in oldest to newest order
                     // Reverse them before prepending to maintain correct chronological order
@@ -310,9 +308,9 @@ const Chat = {
                         ...reversedMessages,
                         ...this.messages[this.currentChatUserId]
                     ];
-                    this.renderMessages(reversedMessages, true); 
-                }              
-                
+                    this.renderMessages(reversedMessages, true);
+                }
+
                 this.page++;
                 logger.info('Successfully loaded messages page:', this.page - 1);
             }
@@ -322,27 +320,27 @@ const Chat = {
             this.isLoadingMessages = false;
         }
     },
-    
+
     renderMessages(messages, prepend = false) {
         if (!messages || messages.length === 0 || !this.chatMessages) return;
         const scrollPos = this.chatMessages.scrollHeight - this.chatMessages.scrollTop;
         const fragment = document.createDocumentFragment();
-        
+
         messages.forEach(msg => {
             const messageElement = document.createElement('div');
             const isSent = msg.senderId === this.currentUserId;
-            
+
             messageElement.className = `message ${isSent ? 'outgoing' : 'incoming'}`;
             messageElement.dataset.messageId = msg.id;
-            
+
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
             const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const sender = msg.senderName || (isSent ? this.currentUsername : this.getChatUserName());
-            
+
             // Only show read status for sent messages
             const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
-            
+
             messageElement.innerHTML = `
                 <div class="message-bubble">
                     <div class="message-content">${msg.content}</div>
@@ -353,17 +351,6 @@ const Chat = {
                 </div>
             `;
 
-            // messageElement.innerHTML = `
-            //     <div class="message-sender">${sender}</div>
-            //     <div class="message-bubble">
-            //         <div class="message-content">${msg.content}</div>
-            //         <div class="message-meta">
-            //             • ${formattedDate}
-            //             ${readStatus}
-            //         </div>
-            //     </div>
-            // `;
-            
             fragment.appendChild(messageElement);
         });
 
@@ -385,18 +372,18 @@ const Chat = {
             </span>
         `;
     },
-    
+
     getChatUserName() {
         return this.chatUserName ? this.chatUserName.textContent : 'User';
     },
-    
+
     handleMessageSubmit(e) {
         e.preventDefault();
-    
+
         if (!this.chatInput) return;
-        
+
         const content = this.chatInput.value.trim();
-    
+
         if (content && this.currentChatUserId) {
             const optimisticMsg = {
                 id: 'temp-' + Date.now(),
@@ -406,27 +393,27 @@ const Chat = {
                 content: content,
                 timestamp: new Date().toISOString()
             };
-            
+
             // Add to local messages
             if (!this.messages[this.currentChatUserId]) {
                 this.messages[this.currentChatUserId] = [];
             }
             this.messages[this.currentChatUserId].push(optimisticMsg);
-            
+
             this.renderMessages([optimisticMsg]);
-            
+
             // Send message via WebSocket
-            this.sendPrivateMessage(this.currentChatUserId, content); 
+            this.sendPrivateMessage(this.currentChatUserId, content);
             this.chatInput.value = ''; // Clear input
         }
     },
-    
+
     sendPrivateMessage(receiverId, content) {
         const messageSent = webSocketManager.sendMessage('privateMessage', {
             receiverId: receiverId,
             content: content
         });
-        
+
         // If WebSocket failed, send via API as fallback
         if (!messageSent) {
             api.sendMessage(receiverId, content)
@@ -444,19 +431,19 @@ const Chat = {
                 });
         }
     },
-    
+
     handleIncomingMessage(message) {
-        const isCurrentChat = this.currentChatUserId === message.senderId || 
-                            this.currentChatUserId === message.receiverId;
-        
-        const userId = message.senderId === this.currentUserId ? 
-                      message.receiverId : message.senderId;
-        
+        const isCurrentChat = this.currentChatUserId === message.senderId ||
+            this.currentChatUserId === message.receiverId;
+
+        const userId = message.senderId === this.currentUserId ?
+            message.receiverId : message.senderId;
+
         if (!this.messages[userId]) {
             this.messages[userId] = [];
         }
         this.messages[userId].push(message);
-        
+
         // If in current chat, render message
         if (isCurrentChat) {
             this.renderMessages([message]);
@@ -468,7 +455,7 @@ const Chat = {
                 this.unreadMessages[message.senderId] = 0;
             }
             this.unreadMessages[message.senderId]++;
-            
+
             this.updateUnreadCount();
             this.renderUsers(); // Update user list to show unread indicator
         }
@@ -477,7 +464,7 @@ const Chat = {
     async markMessagesAsRead(userId) {
         try {
             this.clearUnread(userId);
-            
+
             webSocketManager.sendMessage('readReceipt', {
                 readerId: this.currentUserId,
                 senderId: userId
@@ -487,7 +474,7 @@ const Chat = {
             logger.error('Error marking messages as read:', error);
         }
     },
-    
+
     clearUnread(userId) {
         if (this.unreadMessages[userId]) {
             this.unreadMessages[userId] = 0;
@@ -500,46 +487,60 @@ const Chat = {
         if (this.typingTimeout) {
             clearTimeout(this.typingTimeout); // Clear existing timeout
         }
-        
+
         // Send typing indicator
         webSocketManager.sendMessage('typingIndicator', {
-            senderId: this.currentUserId,
             receiverId: this.currentChatUserId,
-            typing: true
+            isTyping: true
         });
-        
+
         // Set timeout to stop typing indicator
         this.typingTimeout = setTimeout(() => {
             webSocketManager.sendMessage('typingIndicator', {
-                senderId: this.currentUserId,
                 receiverId: this.currentChatUserId,
-                typing: false
+                isTyping: false
             });
         }, 2000);
     },
-    
+
     showTypingIndicator(data) {
-        if (!this.typingIndicator || data.senderId !== this.currentChatUserId) return;
-        
-        if (data.typing) {
-            this.typingIndicator.classList.remove('hidden');
+        if (!this.typingIndicator) {
+            logger.error('No typing indicator element found');
+            return;
+        }
+
+        // Show typing indicator only if we're currently chatting with the person who is typing
+        if (data.senderId === this.currentChatUserId) {
+            if (data.isTyping) {
+                this.typingIndicator.classList.remove('hidden');
+                const userName = this.chatUserName ? this.chatUserName.textContent : 'User';
+                this.typingIndicator.innerHTML = `
+                    ${userName} is typing<span></span><span></span><span></span>
+                `;
+            } else {
+                this.typingIndicator.classList.add('hidden');
+                this.typingIndicator.innerHTML = '';
+            }
         } else {
-            this.typingIndicator.classList.add('hidden');
+            logger.info('Ignoring typing indicator - not from current chat user', {
+                senderId: data.senderId,
+                currentChatUserId: this.currentChatUserId
+            });
         }
     },
-    
+
     updateUserStatus(userId, isOnline) {
         const userIndex = this.users.findIndex(u => u.id === userId);
         if (userIndex !== -1) {
             this.users[userIndex].online = isOnline;
         }
-        
+
         // Update in current chat if applicable
         if (this.currentChatUserId === userId && this.chatUserStatus) {
             this.chatUserStatus.textContent = isOnline ? 'Online' : 'Offline';
             this.chatUserStatus.className = `user-status ${isOnline ? 'online' : 'offline'}`;
         }
-        
+
         // Update in user list
         const userItem = this.usersList ? this.usersList.querySelector(`[data-user-id="${userId}"]`) : null;
         if (userItem) {
@@ -549,11 +550,11 @@ const Chat = {
             }
         }
     },
-    
+
     updateUnreadCount() {
         if (!this.unreadCountElement) return;
         const totalUnread = Object.values(this.unreadMessages).reduce((sum, count) => sum + count, 0);
-        
+
         if (totalUnread > 0) {
             this.unreadCountElement.textContent = totalUnread > 99 ? '99+' : totalUnread;
             this.unreadCountElement.classList.remove('hidden');
@@ -561,7 +562,7 @@ const Chat = {
             this.unreadCountElement.classList.add('hidden');
         }
     },
-    
+
     markMessageAsRead(data) {
         const messageElements = document.querySelectorAll(`.message[data-message-id]`);
         messageElements.forEach(element => {
@@ -571,20 +572,20 @@ const Chat = {
             }
         });
     },
-     // Get last message time for a user (for sorting)
-     getLastMessageTime(userId) {
+    // Get last message time for a user (for sorting)
+    getLastMessageTime(userId) {
         if (!this.messages[userId] || this.messages[userId].length === 0) {
             return null;
         }
-        
+
         const lastMessage = this.messages[userId][this.messages[userId].length - 1];
         return new Date(lastMessage.timestamp).getTime();
     },
 
-     // Handle scroll in messages container
-     handleScroll() {
+    // Handle scroll in messages container
+    handleScroll() {
         // If scrolled to top, load more messages
-        if (this.chatMessages && this.chatMessages.scrollTop < 50 && 
+        if (this.chatMessages && this.chatMessages.scrollTop < 50 &&
             !this.isLoadingMessages && this.hasMoreMessages) {
             this.loadMessages();
         }
@@ -594,7 +595,7 @@ const Chat = {
 // Utility function to throttle scroll events
 function throttle(callback, delay) {
     let lastCall = 0;
-    return function(...args) {
+    return function (...args) {
         const now = new Date().getTime();
         if (now - lastCall < delay) {
             return;
@@ -607,7 +608,7 @@ function throttle(callback, delay) {
 // Utility function to debounce search input
 function debounce(callback, delay) {
     let timeout;
-    return function(...args) {
+    return function (...args) {
         clearTimeout(timeout);
         timeout = setTimeout(() => callback(...args), delay);
     };
