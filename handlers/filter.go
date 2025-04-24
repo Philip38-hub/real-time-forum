@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"database/sql"
-	"html/template"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -128,22 +128,22 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 
 		commentQuery := `
 			SELECT c.id, c.content, u.username, c.created_at, 
-       COALESCE(clike.like_count, 0) AS like_count,
-       COALESCE(cdislike.dislike_count, 0) AS dislike_count
-FROM comments c
-JOIN users u ON c.user_id = u.id
-LEFT JOIN (
-    SELECT comment_id, COUNT(CASE WHEN is_like = 1 THEN 1 END) AS like_count
-    FROM comment_likes
-    GROUP BY comment_id
-) clike ON c.id = clike.comment_id
-LEFT JOIN (
-    SELECT comment_id, COUNT(CASE WHEN is_like = 0 THEN 1 END) AS dislike_count
-    FROM comment_likes
-    GROUP BY comment_id
-) cdislike ON c.id = cdislike.comment_id
-WHERE c.post_id = ?
-ORDER BY c.created_at DESC
+		COALESCE(clike.like_count, 0) AS like_count,
+		COALESCE(cdislike.dislike_count, 0) AS dislike_count
+		FROM comments c
+		JOIN users u ON c.user_id = u.id
+		LEFT JOIN (
+			SELECT comment_id, COUNT(CASE WHEN is_like = 1 THEN 1 END) AS like_count
+			FROM comment_likes
+			GROUP BY comment_id
+		) clike ON c.id = clike.comment_id
+		LEFT JOIN (
+			SELECT comment_id, COUNT(CASE WHEN is_like = 0 THEN 1 END) AS dislike_count
+			FROM comment_likes
+			GROUP BY comment_id
+		) cdislike ON c.id = cdislike.comment_id
+		WHERE c.post_id = ?
+		ORDER BY c.created_at DESC
 
 		`
 		commentRows, err := db.Query(commentQuery, post.ID)
@@ -170,22 +170,19 @@ ORDER BY c.created_at DESC
 		posts = append(posts, post)
 	}
 
-	// Render the home template with the filtered posts
-	tmpl, err := template.ParseFiles("templates/home.html")
-	if err != nil {
-		log.Printf("Error parsing template: %v", err)
-		RenderError(w, r, "Error parsing template", http.StatusInternalServerError)
+	// --- JSON API RESPONSE ---
+	accept := r.Header.Get("Accept")
+	if accept == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"posts": posts,
+			"isLoggedIn": isLoggedIn,
+			"selectedCategory": category,
+		})
+		if err != nil {
+			log.Printf("Error encoding JSON: %v", err)
+		}
 		return
 	}
 
-	err = tmpl.Execute(w, map[string]interface{}{
-		"Posts":            posts,
-		"IsLoggedIn":       isLoggedIn,
-		"SelectedCategory": category,
-	})
-	if err != nil {
-		log.Printf("Error executing template: %v", err)
-		RenderError(w, r, "Error rendering page", http.StatusInternalServerError)
-		return
-	}
 }

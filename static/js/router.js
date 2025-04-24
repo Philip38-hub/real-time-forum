@@ -31,18 +31,18 @@ class Router {
     }
 
     navigate(url, replace = false) {
-        const path = new URL(url, window.location.origin).pathname;
-        
+        const urlObj = new URL(url, window.location.origin);
+        const fullPath = urlObj.pathname + urlObj.search + urlObj.hash;
+
         // Prevent recursive navigation to the same path
-        if (path === window.location.pathname) {
+        if (fullPath === window.location.pathname + window.location.search + window.location.hash) {
             return;
         }
-        
-        // Update browser history
+
         if (replace) {
-            window.history.replaceState(null, '', path);
+            window.history.replaceState(null, '', fullPath);
         } else {
-            window.history.pushState(null, '', path);
+            window.history.pushState(null, '', fullPath);
         }
         
         this.handleRoute();
