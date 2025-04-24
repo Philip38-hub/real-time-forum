@@ -281,7 +281,7 @@ func HandleTypingIndicator(content interface{}, senderId string) {
 		return
 	}
 
-	isTyping, ok := contentMap["typing"].(bool)
+	isTyping, ok := contentMap["isTyping"].(bool)
 	if !ok {
 		return
 	}
@@ -325,8 +325,8 @@ func HandleReadReceipt(content interface{}, userId string) {
 
 	// Notify sender that messages were read
 	SendToUser(senderId, "readReceipt", map[string]interface{}{
-		"readerId": userId,
-		"senderId": senderId,
+		"readerId":  userId,
+		"senderId":  senderId,
 		"timestamp": time.Now(),
 	})
 }
