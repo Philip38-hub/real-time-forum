@@ -28,10 +28,10 @@
 
 /* Adjust main content to create better balance */
 .main-content {
-    max-width: 1200px; /* Set maximum width for better readability */
-    margin: 0 370px 0 auto; /* Changed from just margin-right to center content with space for chat */
+    max-width: 1200px;
+    margin: 0 370px 0 auto;
     padding: 20px;
-    width: calc(100% - 370px); /* Ensure content doesn't overflow */
+    width: calc(100% - 370px);
 }
 
 /* Posts container adjustments */
@@ -59,13 +59,13 @@
     .chat-container {
         display: none;
     }
-    
+
     .main-content {
         margin: 0 auto;
         width: 100%;
         padding: 20px;
     }
-    
+
     .chat-toggle {
         display: flex;
         position: fixed;
@@ -115,7 +115,8 @@
     margin: 10px 0;
 }
 
-.minimize-btn, .close-btn {
+.minimize-btn,
+.close-btn {
     background: none;
     border: none;
     cursor: pointer;
@@ -123,7 +124,8 @@
     font-size: 16px;
 }
 
-.minimize-btn:hover, .close-btn:hover {
+.minimize-btn:hover,
+.close-btn:hover {
     color: #333;
 }
 
@@ -183,7 +185,7 @@
 }
 
 .unread-indicator {
-    background-color: #4A7C8C; 
+    background-color: #4A7C8C;
     color: white;
     border-radius: 12px;
     padding: 1px 7px;
@@ -194,12 +196,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: auto; 
+    margin-left: auto;
 }
 
 /* Hover effect */
 .user:hover .unread-indicator {
-    background-color: #3d6975; 
+    background-color: #3d6975;
 }
 
 /* Chat main area */
@@ -248,7 +250,7 @@
     flex: 1;
     padding: 20px;
     overflow-y: auto;
-    background-color: #edeef0;  /* Telegram-like background */
+    background-color: #edeef0;
 }
 
 .message {
@@ -277,7 +279,7 @@
 }
 
 .message.outgoing .message-bubble {
-    background-color: #eeffde;  /* Telegram's green tint for sent messages */
+    background-color: #eeffde;
     border-top-right-radius: 4px;
 }
 
@@ -318,7 +320,7 @@
 }
 
 .message-status.read .fa-check {
-    color: #53bdeb;  /* Telegram's blue */
+    color: #53bdeb;
 }
 
 /* Animation for new messages */
@@ -327,6 +329,7 @@
         opacity: 0;
         transform: translateY(8px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -334,12 +337,12 @@
 }
 
 /* Message groups - add margin between messages from different times */
-.message + .message {
+.message+.message {
     margin-top: 1px;
 }
 
-.message:not(.outgoing) + .message.outgoing,
-.message.outgoing + .message:not(.outgoing) {
+.message:not(.outgoing)+.message.outgoing,
+.message.outgoing+.message:not(.outgoing) {
     margin-top: 12px;
 }
 
@@ -406,5 +409,53 @@
     .chat-container {
         right: 0;
         width: 100%;
+    }
+}
+
+/* Typing indicator */
+.typing-indicator {
+    padding: 8px 12px;
+    position: relative;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border-radius: 18px;
+    margin: 10px 20px;
+    width: fit-content;
+    box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.13);
+}
+
+.typing-indicator.hidden {
+    display: none;
+}
+
+.typing-indicator span {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background-color: #93989c;
+    border-radius: 50%;
+    margin-right: 2px;
+    animation: blink 1.4s infinite both;
+}
+
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 0.2;
+    }
+
+    50% {
+        opacity: 1;
     }
 }
