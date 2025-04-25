@@ -128,6 +128,10 @@ class Comments {
             const response = await api.createComment(postId, content);
             store.addComment(postId, response.comment);
             form.reset();
+            // --- Force full post list re-render after adding comment ---
+            if (typeof postList !== 'undefined' && postList.render) {
+                postList.render();
+            }
         } catch (error) {
             store.setError('Failed to post comment');
         } finally {

@@ -166,7 +166,7 @@ class Store {
     // Comment actions
     addComment(postId, comment) {
         const updatedPosts = this.state.posts.map(post => {
-            if (post.ID === postId) {
+            if (String(post.ID) === String(postId)) {
                 return {
                     ...post,
                     Comments: [comment, ...(post.Comments || [])]

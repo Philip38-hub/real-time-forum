@@ -1,13 +1,24 @@
+const openCommentsSections = new Set();
+
 class PostList {
     constructor() {
         this.container = document.getElementById('main-container');
         
         // Subscribe to posts changes
         store.subscribe((state) => {
-            if (this.lastPosts !== state.posts) {
-                this.lastPosts = state.posts;
-                this.render();
-            }
+            // Instead of re-rendering all posts when any post changes:
+            this.lastPosts = state.posts;
+            this.render();
+
+            // Consider implementing a more granular update system:
+            if (state.posts.length !== this.lastPosts?.length) {
+                // Full re-render if number of posts changed
+            this.lastPosts = state.posts;
+            this.render();
+        } else {
+            // Otherwise, just update the changed posts
+            this.updateChangedPosts(state.posts);
+        }
         });
         // Bind event handler for event delegation
         this.handleDelegatedClick = this.handleDelegatedClick.bind(this);
@@ -40,6 +51,8 @@ class PostList {
             // Add event delegation listener after rendering
             this.container.removeEventListener('click', this.handleDelegatedClick); // Prevent duplicate listeners
             this.container.addEventListener('click', this.handleDelegatedClick);
+            // Restore open comment sections after rendering
+            this.restoreOpenCommentsSections();
         } catch (error) {
             console.error('Error rendering posts:', error);
             this.container.innerHTML = '<p>Error rendering posts. Please try again.</p>';
@@ -76,6 +89,7 @@ class PostList {
 
                 <!-- Comments Section -->
                 <div class="comments-section" id="comments-${post.ID}" style="display: none;">
+                    <button class="close-comments-btn" data-post-id="${post.ID}" title="Close Comments" style="float:right; margin:5px;">&times;</button>
                     ${comments.renderCommentSection(post.ID, Array.isArray(post.Comments) ? post.Comments : [])}
                 </div>
             </div>
@@ -87,6 +101,7 @@ class PostList {
         const likeBtn = event.target.closest('.post-like-button');
         const dislikeBtn = event.target.closest('.post-dislike-button');
         const commentBtn = event.target.closest('.post-comment-button');
+        const closeCommentsBtn = event.target.closest('.close-comments-btn');
         const postDiv = event.target.closest('.post');
         if (!postDiv) return;
         const postId = postDiv.dataset.postId;
@@ -103,6 +118,11 @@ class PostList {
         if (commentBtn) {
             event.preventDefault();
             this.toggleComments(postId);
+            return;
+        }
+        if (closeCommentsBtn) {
+            event.preventDefault();
+            this.closeCommentsSection(postId);
             return;
         }
     }
@@ -169,11 +189,44 @@ class PostList {
         }
     }
 
+    restoreOpenCommentsSections() {
+        // For each open postId, set its comments section to display: block
+        openCommentsSections.forEach(postId => {
+            const section = document.getElementById(`comments-${postId}`);
+            if (section) {
+                section.style.display = 'block';
+            }
+        });
+    }
+
     // No need for addEventListeners anymore
     toggleComments(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
         if (commentsSection) {
-            commentsSection.style.display = commentsSection.style.display === 'none' ? 'block' : 'none';
+            if (commentsSection.style.display === 'none' || commentsSection.style.display === '') {
+                // Re-render the comments section with the latest comments
+                const post = store.state.posts.find(p => String(p.ID) === String(postId));
+                if (post) {
+                    commentsSection.innerHTML = `
+                        <button class="close-comments-btn" data-post-id="${postId}" title="Close Comments" style="float:right; margin:5px;">&times;</button>
+                        ${comments.renderCommentSection(postId, Array.isArray(post.Comments) ? post.Comments : [])}
+                    `;
+                }
+                commentsSection.style.display = 'block';
+                openCommentsSections.add(postId);
+            } else {
+                commentsSection.style.display = 'none';
+                openCommentsSections.delete(postId);
+            }
         }
+    }
+
+    closeCommentsSection(postId) {
+        // Hide the comments section div and remove from openCommentsSections
+        const section = document.getElementById(`comments-${postId}`);
+        if (section) {
+            section.style.display = 'none';
+        }
+        openCommentsSections.delete(postId);
     }
 }
