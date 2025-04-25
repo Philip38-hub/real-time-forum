@@ -180,8 +180,11 @@ const Chat = {
 
         this.usersList.innerHTML = ''; // Clear existing users
 
+        const filteredUsers = this.users.filter(user => user.id !== this.currentUserId);
+
+
         // Sort users: first by last message time, then alphabetically
-        const sortedUsers = [...this.users].sort((a, b) => {
+        const sortedUsers = [...filteredUsers].sort((a, b) => {
             // First check if there are messages
             const aLastMessageTime = this.getLastMessageTime(a.id);
             const bLastMessageTime = this.getLastMessageTime(b.id);
