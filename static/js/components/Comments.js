@@ -200,7 +200,6 @@ class Comments {
     }
 
     findComment(commentId, posts = store.state.posts) {
-        // Ensure consistent type comparison by converting to string
         const targetId = String(commentId);
         
         for (const post of posts) {

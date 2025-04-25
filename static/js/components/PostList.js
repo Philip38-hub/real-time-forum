@@ -4,23 +4,10 @@ class PostList {
     constructor() {
         this.container = document.getElementById('main-container');
         
-        // Subscribe to posts changes
         store.subscribe((state) => {
-            // Instead of re-rendering all posts when any post changes:
             this.lastPosts = state.posts;
             this.render();
-
-            // Consider implementing a more granular update system:
-            if (state.posts.length !== this.lastPosts?.length) {
-                // Full re-render if number of posts changed
-            this.lastPosts = state.posts;
-            this.render();
-        } else {
-            // Otherwise, just update the changed posts
-            this.updateChangedPosts(state.posts);
-        }
         });
-        // Bind event handler for event delegation
         this.handleDelegatedClick = this.handleDelegatedClick.bind(this);
     }
 
@@ -168,29 +155,22 @@ class PostList {
                 }
             }
         }
-        // Immediately update store
         const updatedPost = { ...post, LikeCount: newLikeCount, DislikeCount: newDislikeCount, UserLiked: newUserLiked, UserDisliked: newUserDisliked };
         store.updatePost(updatedPost);
-        // Try backend
-        console.log("Sending like/dislike request", { postId, isLike, user: store.state.user, ts: Date.now() });
         try {
             const response = await api.togglePostLike(postId, isLike);
-            // Convert snake_case to camelCase for consistency
             const serverLikeCount = response.like_count;
             const serverDislikeCount = response.dislike_count;
-            // Use backend counts if different
             if (response && (serverLikeCount !== newLikeCount || serverDislikeCount !== newDislikeCount)) {
                 store.updatePostLikes(postId, serverLikeCount, serverDislikeCount);
             }
         } catch (error) {
-            // Rollback on failure
             store.updatePost(post);
             store.setError('Failed to update like status');
         }
     }
 
     restoreOpenCommentsSections() {
-        // For each open postId, set its comments section to display: block
         openCommentsSections.forEach(postId => {
             const section = document.getElementById(`comments-${postId}`);
             if (section) {
@@ -199,12 +179,10 @@ class PostList {
         });
     }
 
-    // No need for addEventListeners anymore
     toggleComments(postId) {
         const commentsSection = document.getElementById(`comments-${postId}`);
         if (commentsSection) {
             if (commentsSection.style.display === 'none' || commentsSection.style.display === '') {
-                // Re-render the comments section with the latest comments
                 const post = store.state.posts.find(p => String(p.ID) === String(postId));
                 if (post) {
                     commentsSection.innerHTML = `
@@ -222,7 +200,6 @@ class PostList {
     }
 
     closeCommentsSection(postId) {
-        // Hide the comments section div and remove from openCommentsSections
         const section = document.getElementById(`comments-${postId}`);
         if (section) {
             section.style.display = 'none';
