@@ -89,7 +89,8 @@ func InitDB() {
 
     CREATE TABLE IF NOT EXISTS sessions (
         session_id TEXT PRIMARY KEY NOT NULL,
-        user_id TEXT ,
+        user_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
