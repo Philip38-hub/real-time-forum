@@ -1,13 +1,3 @@
-// Fallback logger to prevent ReferenceError
-if (typeof logger === 'undefined') {
-    window.logger = {
-        info: console.log,
-        log: console.log,
-        warn: console.warn,
-        error: console.error
-    };
-}
-
 // WebSocket Manager for forum real-time updates
 class ForumWebSocket {
     constructor() {
@@ -141,6 +131,19 @@ class ForumWebSocket {
         return this.connectionStatus && this.socket && this.socket.readyState === WebSocket.OPEN;
     }
 }
+
+// Enhanced console logging
+const getLogPrefix = () => {
+    const now = new Date();
+    return `[${now.toISOString()}] [WebSocket]`;
+};
+
+const logger = {
+    log: (message, ...args) => console.log(getLogPrefix(), message, ...args),
+    error: (message, ...args) => console.error(getLogPrefix(), message, ...args),
+    warn: (message, ...args) => console.warn(getLogPrefix(), message, ...args),
+    info: (message, ...args) => console.info(getLogPrefix(), message, ...args)
+};
 
 // Create singleton instance
 const webSocketManager = new ForumWebSocket();
