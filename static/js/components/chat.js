@@ -144,7 +144,7 @@ class Chat {
 
     async fetchUsers() {
         try {
-            const response = await api.fetchUsers();
+            const response = await apiRequests.fetchUsers();
             if (response.success) {
                 this.users = response.users;
 
@@ -169,14 +169,20 @@ class Chat {
 
         this.usersList.innerHTML = '';
 
-        const sortedUsers = [...this.users].sort((a, b) => {
+        const filteredUsers = this.users.filter(user => user.id !== this.currentUserId);
+
+        // Sort users: first by last message time, then alphabetically
+        const sortedUsers = [...filteredUsers].sort((a, b) => {
+            // First check if there are messages
             const aLastMessageTime = this.getLastMessageTime(a.id);
             const bLastMessageTime = this.getLastMessageTime(b.id);
 
+            // If both have messages, sort by most recent
             if (aLastMessageTime && bLastMessageTime) {
                 return bLastMessageTime - aLastMessageTime;
             }
 
+            // If only one has messages, prioritize that one
             if (aLastMessageTime) return -1;
             if (bLastMessageTime) return 1;
 
@@ -257,7 +263,7 @@ class Chat {
             loadingEl.textContent = 'Loading messages...';
             this.chatMessages.prepend(loadingEl);
 
-            const response = await api.fetchMessages(this.currentChatUserId, this.page);
+            const response = await apiRequests.fetchMessages(this.currentChatUserId, this.page);
 
             loadingEl.remove();
 
@@ -381,7 +387,7 @@ class Chat {
         });
 
         if (!messageSent) {
-            api.sendMessage(receiverId, content)
+            apiRequests.sendMessage(receiverId, content)
                 .then(response => {
                     if (response.success) {
                         const tempMsg = document.querySelector(`[data-message-id="temp-${Date.now()}"]`);
