@@ -174,19 +174,56 @@ class Api {
         });
     }
 
-    /*       Fetch all users     */
-    fetchUsers() {
-        return fetch('/api/messages/users', {
-            credentials: 'include',
-            headers: { 'Accept': 'application/json' }
-        })
-        .then(res => res.json());
+    // OAuth endpoints
+    async githubLogin() {
+        window.location.href = '/auth/github';
     }
+
+    async googleLogin() {
+        window.location.href = '/auth/google';
+    }
+}
+
+// Create and export a single API instance
+const api = new Api();
+
+const apiRequests = {
+    /**
+     * General purpose fetch API wrapper with error handling
+     */
+    async fetch(url, options = {}) {
+        try {
+            const response = await fetch(url, options);
+
+            // Check for authentication errors
+            if (response.status === 401) {
+                window.location.href = '/login';
+                throw new Error('Authentication required');
+            }
+
+            // Check for successful response
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || `HTTP Error ${response.status}`);
+            }
+
+            // Parse JSON response
+            return await response.json();
+        } catch (error) {
+            logger.error('API Error:', error);
+            throw error;
+        }
+    },
+
+    /*       Fetch all users     */
+    async fetchUsers() {
+        return await this.fetch('/api/messages/users');
+    },
 
     /*       Fetch messages with a specific user     */
     async fetchMessages(userId, page = 1, limit = 10) {
         return await this.fetch(`/api/messages/${userId}?page=${page}&limit=${limit}`);
-    }
+    },
 
     /*     Send a message to a user      */
     async sendMessage(userId, content) {
@@ -200,17 +237,5 @@ class Api {
                 content: content
             })
         });
-    }
-
-    // OAuth endpoints
-    async githubLogin() {
-        window.location.href = '/auth/github';
-    }
-
-    async googleLogin() {
-        window.location.href = '/auth/google';
-    }
-}
-
-// Create and export a single API instance
-const api = new Api();
+    },
+};
