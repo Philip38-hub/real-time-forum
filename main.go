@@ -40,6 +40,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Check if the request matches the "/api/messages" prefix
+	if strings.HasPrefix(r.URL.Path, "/api/messages/") {
+		// Get the part after "/api/messages/"
+		remainingPath := strings.TrimPrefix(r.URL.Path, "/api/messages/")
+
+		// Handle specific cases based on the remaining path
+		switch remainingPath {
+		case "send":
+			handlers.SendMessageHandler(w, r)
+		case "users":
+			handlers.GetUsersHandler(w, r)
+		case "mark-read":
+			handlers.MarkMessageAsReadHandler(w, r)
+		default:
+			// Handle "/api/messages/{userId}" case
+			handlers.GetMessagesHandler(w, r)
+		}
+		return
+	}
+
     // API endpoints (only for correct methods)
     if isAPIEndpoint(r.URL.Path) {
         // Only handle /login as API for POST, otherwise serve SPA
@@ -67,6 +87,8 @@ func isAPIEndpoint(path string) bool {
         "/comment/like",
         "/logout",
         "/api/profile",
+        "/api/current-user",
+        "/ws",
         "/auth/google/login",
         "/auth/google/callback",
         "/auth/github/login",
@@ -105,6 +127,11 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
         handlers.LogoutHandler(w, r)
     case "/api/profile":
         handlers.ProfileHandler(w, r)
+    case "/api/current-user":
+        handlers.CurrentUserHandler(w, r)
+    // WebSocket endpoint
+    case "/ws":
+        handlers.WebSocketHandler(w, r)
     // Google OAuth routes
     case "/auth/google/login":
         handlers.HandleGoogleLogin(w, r)

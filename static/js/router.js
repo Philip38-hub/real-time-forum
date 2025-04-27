@@ -98,9 +98,11 @@ class Router {
         container.innerHTML = `
             <aside class="sidebar" id="sidebar-container"></aside>
             <main id="main-container"></main>
+            <div id="chat-container"></div>
         `;
         const sidebar = new Sidebar();
         sidebar.render();
+        chat.render();
     }
 
     // Helper method to initialize routes

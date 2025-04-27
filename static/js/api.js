@@ -174,6 +174,34 @@ class Api {
         });
     }
 
+    /*       Fetch all users     */
+    fetchUsers() {
+        return fetch('/api/messages/users', {
+            credentials: 'include',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(res => res.json());
+    }
+
+    /*       Fetch messages with a specific user     */
+    async fetchMessages(userId, page = 1, limit = 10) {
+        return await this.fetch(`/api/messages/${userId}?page=${page}&limit=${limit}`);
+    }
+
+    /*     Send a message to a user      */
+    async sendMessage(userId, content) {
+        return await this.fetch('/api/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                receiverId: userId,
+                content: content
+            })
+        });
+    }
+
     // OAuth endpoints
     async githubLogin() {
         window.location.href = '/auth/github';

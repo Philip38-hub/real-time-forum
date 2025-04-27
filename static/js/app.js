@@ -12,6 +12,9 @@ class App {
 
         // Start session check and router initialization
         this.initializeApp();
+
+        // Initialize chat
+        this.chatInit();
     }
 
     async initializeApp() {
@@ -29,6 +32,17 @@ class App {
 
         // Now handle the initial route
         router.handleRoute();
+    }
+
+    async chatInit() {
+        webSocketManager.init();
+        try {
+            await chat.initializeChat();
+            logger.info('Chat initialization completed successfully');
+        } catch (error) {
+            logger.error('Chat initialization failed:', error);
+        }
+        logger.info('Forum application initialized');
     }
 
     setupLoadingIndicator() {
