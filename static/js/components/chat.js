@@ -438,7 +438,7 @@ class Chat {
                 readerId: this.currentUserId,
                 senderId: userId
             });
-            UI.markMessageAsRead(userId);
+            this.markAsRead(userId);
         } catch (error) {
             logger.error('Error marking messages as read:', error);
         }
@@ -535,6 +535,14 @@ class Chat {
                 statusElement.classList.add('read');
             }
         });
+    }
+
+    // Mark a message as read
+    markAsRead(data) {
+        const messageElement = document.querySelector(`[data-message-id='${data.messageId}']`);
+        if (messageElement) {
+            messageElement.classList.add('read');
+        }
     }
 
     getLastMessageTime(userId) {
