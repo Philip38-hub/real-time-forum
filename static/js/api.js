@@ -65,10 +65,13 @@ class Api {
         return response;
     }
 
-    async register(username, email, password, age, gender) {
+    async register(registrationData) {
         const response = await this.request('/register', {
             method: 'POST',
-            body: JSON.stringify({ username, email, password, age, gender })
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(registrationData)
         });
         return response;
     }
