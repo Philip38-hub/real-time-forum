@@ -26,8 +26,8 @@ class LoginForm {
 
                 <!-- Traditional Login Form -->
                 <form onsubmit="loginForm.handleSubmit(event)">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
+                    <label for="identifier">Email or Nickname:</label>
+                    <input type="text" id="identifier" name="identifier" placeholder="Email or Nickname" required>
                     <br>
                     <label for="password">Password:</label>
                     <input type="password" id="password" name="password" required>
@@ -61,7 +61,7 @@ class LoginForm {
 
             // Wait for login and state update to complete
             const response = await api.login(
-                formData.get('email'),
+                formData.get('identifier'),
                 formData.get('password')
             );
 

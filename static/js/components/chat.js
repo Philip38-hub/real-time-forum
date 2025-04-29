@@ -5,7 +5,7 @@
 class Chat {
     constructor() {
         this.currentUserId = null;
-        this.currentUsername = null;
+        this.currentNickname = null;
         this.currentChatUserId = null;
         this.typingTimeout = null;
         this.users = [];
@@ -45,14 +45,14 @@ class Chat {
             if (!response.ok || !data.authenticated) {
                 throw new Error(data.error || `Authentication failed: ${response.status}`);
             }
-            if (!data.userId || !data.username) {
+            if (!data.userId || !data.nickname) {
                 throw new Error('Invalid user info received');
             }
             this.currentUserId = data.userId;
-            this.currentUsername = data.username;
+            this.currentNickname = data.nickname;
             logger.info('User profile loaded:', {
                 userId: this.currentUserId,
-                username: this.currentUsername
+                nickname: this.currentNickname
             });
             this.init();
             return true;
@@ -198,7 +198,7 @@ class Chat {
             if (aLastMessageTime) return -1;
             if (bLastMessageTime) return 1;
 
-            return a.username.localeCompare(b.username);
+            return a.nickname.localeCompare(b.nickname);
         });
 
         sortedUsers.forEach(user => {
@@ -210,7 +210,7 @@ class Chat {
 
             userElement.innerHTML = `
                 <span class="user-status-indicator ${user.online ? 'online' : 'offline'}"></span>
-                <span class="user-name">${user.username}</span>
+                <span class="user-name">${user.nickname}</span>
                 ${hasUnread ? `<span class="unread-indicator">${this.unreadMessages[user.id]}</span>` : ''}
             `;
 
@@ -224,8 +224,8 @@ class Chat {
         const lowerSearchTerm = searchTerm.toLowerCase();
 
         items.forEach(item => {
-            const username = item.querySelector('.user-name').textContent.toLowerCase();
-            if (username.includes(lowerSearchTerm)) {
+            const nickname = item.querySelector('.user-name').textContent.toLowerCase();
+            if (nickname.includes(lowerSearchTerm)) {
                 item.style.display = 'flex';
             } else {
                 item.style.display = 'none';
@@ -240,7 +240,7 @@ class Chat {
             this.chatContainer.classList.add('chat-active');
         }
 
-        if (this.chatUserName) this.chatUserName.textContent = user.username;
+        if (this.chatUserName) this.chatUserName.textContent = user.nickname;
         if (this.chatUserStatus) {
             this.chatUserStatus.textContent = user.online ? 'Online' : 'Offline';
             this.chatUserStatus.className = `user-status ${user.online ? 'online' : 'offline'}`;
@@ -327,7 +327,7 @@ class Chat {
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
             const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const sender = msg.senderName || (isSent ? this.currentUsername : this.getChatUserName());
+            const sender = msg.senderName || (isSent ? this.currentNickname : this.getChatUserName());
 
             const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
 
@@ -376,7 +376,7 @@ class Chat {
             const optimisticMsg = {
                 id: 'temp-' + Date.now(),
                 senderId: this.currentUserId,
-                senderName: this.currentUsername,
+                senderName: this.currentNickname,
                 receiverId: this.currentChatUserId,
                 content: content,
                 timestamp: new Date().toISOString()

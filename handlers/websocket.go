@@ -236,10 +236,10 @@ func HandlePrivateMessage(content interface{}, senderId string) {
 		return
 	}
 
-	// Get sender's username
-	senderName, err := GetUsernameById(senderId)
+	// Get sender's nickname
+	senderName, err := GetNicknameById(senderId)
 	if err != nil {
-		log.Printf("Error getting sender username: %v", err)
+		log.Printf("Error getting sender nickname: %v", err)
 		return
 	}
 

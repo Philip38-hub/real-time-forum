@@ -50,10 +50,10 @@ class Api {
     }
 
     // Authentication endpoints
-    async login(email, password) {
+    async login(identifier, password) {
         const response = await this.request('/login', {
             method: 'POST',
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({ identifier, password }),
             headers: {
                 'Content-Type': 'application/json'
             }

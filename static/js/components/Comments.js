@@ -64,7 +64,7 @@ class Comments {
             <div class="comment" data-comment-id="${comment.ID}">
                 <div class="comment-content">${comment.Content || ''}</div>
                 <div class="comment-meta">
-                    <span class="comment-author">Posted by ${comment.Username || 'Anonymous'}</span>
+                    <span class="comment-author">Posted by ${comment.Nickname || 'Anonymous'}</span>
                     <span class="comment-date">${this.formatDate(comment.CreatedAt)}</span>
                 </div>
                 ${this.user ? this.renderCommentActions(comment) : ''}

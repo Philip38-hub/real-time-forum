@@ -1,88 +1,88 @@
 package handlers
 
 import (
-    "database/sql"
-    "html/template"
-    "net/http"
-    "net/http/httptest"
-    "testing"
+	"database/sql"
+	"html/template"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 )
 
 var parseTemplate = func(_ ...string) (*template.Template, error) {
-    return template.New("mock").Parse("<html></html>") // Mock template
+	return template.New("mock").Parse("<html></html>") // Mock template
 }
 
 func TestHomeHandler(t *testing.T) {
-    // Store original functions to restore after test
-    originalGetUserIdFromSession := GetUserIdFromSession
-    originalGetCommentsForPost := GetCommentsForPost
-    originalDB := db
-    originalRenderError := RenderError
+	// Store original functions to restore after test
+	originalGetUserIdFromSession := GetUserIdFromSession
+	originalGetCommentsForPost := GetCommentsForPost
+	originalDB := db
+	originalRenderError := RenderError
 
-    // Restore original functions after test
-    defer func() {
-        GetUserIdFromSession = originalGetUserIdFromSession
-        GetCommentsForPost = originalGetCommentsForPost
-        db = originalDB
-        RenderError = originalRenderError
-    }()
+	// Restore original functions after test
+	defer func() {
+		GetUserIdFromSession = originalGetUserIdFromSession
+		GetCommentsForPost = originalGetCommentsForPost
+		db = originalDB
+		RenderError = originalRenderError
+	}()
 
-    // Test case: Database Query Error
-    t.Run("Database Query Error", func(t *testing.T) {
-        // Mock GetUserIdFromSession
-        GetUserIdFromSession = func(w http.ResponseWriter, r *http.Request) string {
-            return "testuser"
-        }
+	// Test case: Database Query Error
+	t.Run("Database Query Error", func(t *testing.T) {
+		// Mock GetUserIdFromSession
+		GetUserIdFromSession = func(w http.ResponseWriter, r *http.Request) string {
+			return "testuser"
+		}
 
-        // Create a mock database that will cause a query error
-        mockDB, err := sql.Open("sqlite3", ":memory:")
-        if err != nil {
-            t.Fatalf("Failed to create mock database: %v", err)
-        }
-        defer mockDB.Close()
+		// Create a mock database that will cause a query error
+		mockDB, err := sql.Open("sqlite3", ":memory:")
+		if err != nil {
+			t.Fatalf("Failed to create mock database: %v", err)
+		}
+		defer mockDB.Close()
 
-        // Replace global db with mock
-        db = mockDB
+		// Replace global db with mock
+		db = mockDB
 
-        // Track if RenderError was called
-        var renderErrorCalled bool
-        RenderError = func(w http.ResponseWriter, r *http.Request, message string, statusCode int) {
-            renderErrorCalled = true
-            http.Error(w, message, statusCode)
-        }
+		// Track if RenderError was called
+		var renderErrorCalled bool
+		RenderError = func(w http.ResponseWriter, r *http.Request, message string, statusCode int) {
+			renderErrorCalled = true
+			http.Error(w, message, statusCode)
+		}
 
-        // Create request and response recorder
-        req := httptest.NewRequest(http.MethodGet, "/", nil)
-        w := httptest.NewRecorder()
+		// Create request and response recorder
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		w := httptest.NewRecorder()
 
-        // Call handler
-        HomeHandler(w, req)
+		// Call handler
+		HomeHandler(w, req)
 
-        // Check if RenderError was called
-        if !renderErrorCalled {
-            t.Errorf("Expected RenderError to be called on database query error")
-        }
-    })
+		// Check if RenderError was called
+		if !renderErrorCalled {
+			t.Errorf("Expected RenderError to be called on database query error")
+		}
+	})
 }
 
 func TestGetCommentsForPost(t *testing.T) {
-    // Setup mock database
-    mockDB, err := sql.Open("sqlite3", ":memory:")
-    if err != nil {
-        t.Fatalf("Failed to create mock database: %v", err)
-    }
-    defer mockDB.Close()
+	// Setup mock database
+	mockDB, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to create mock database: %v", err)
+	}
+	defer mockDB.Close()
 
-    // Replace global db with mock
-    originalDB := db
-    db = mockDB
-    defer func() { db = originalDB }()
+	// Replace global db with mock
+	originalDB := db
+	db = mockDB
+	defer func() { db = originalDB }()
 
-    // Prepare mock database schema and data
-    _, err = mockDB.Exec(`
+	// Prepare mock database schema and data
+	_, err = mockDB.Exec(`
         CREATE TABLE users (
             id TEXT PRIMARY KEY,
-            username TEXT
+            nickname TEXT
         );
         CREATE TABLE posts (
             id INTEGER PRIMARY KEY,
@@ -108,7 +108,7 @@ func TestGetCommentsForPost(t *testing.T) {
         );
 
         -- Insert test users
-        INSERT INTO users (id, username) VALUES 
+        INSERT INTO users (id, nickname) VALUES 
         ('user1', 'testuser1'),
         ('user2', 'testuser2');
 
@@ -128,81 +128,81 @@ func TestGetCommentsForPost(t *testing.T) {
         (2, 'user1', 0),
         (2, 'user2', 0);
     `)
-    if err != nil {
-        t.Fatalf("Failed to prepare mock data: %v", err)
-    }
+	if err != nil {
+		t.Fatalf("Failed to prepare mock data: %v", err)
+	}
 
-    // Mock GetCommentReplies
-    originalGetCommentReplies := GetCommentReplies
-    GetCommentReplies = func(commentID int, userID string) ([]Comment, error) {
-        if commentID == 1 {
-            return []Comment{
-                {
-                    ID:       3,
-                    PostID:   1,
-                    UserID:   "user1",
-                    Content:  "Reply to first",
-                    Username: "testuser1",
-                },
-            }, nil
-        }
-        return []Comment{}, nil
-    }
-    defer func() { GetCommentReplies = originalGetCommentReplies }()
+	// Mock GetCommentReplies
+	originalGetCommentReplies := GetCommentReplies
+	GetCommentReplies = func(commentID int, userID string) ([]Comment, error) {
+		if commentID == 1 {
+			return []Comment{
+				{
+					ID:       3,
+					PostID:   1,
+					UserID:   "user1",
+					Content:  "Reply to first",
+					Nickname: "testuser1",
+				},
+			}, nil
+		}
+		return []Comment{}, nil
+	}
+	defer func() { GetCommentReplies = originalGetCommentReplies }()
 
-    // Test cases
-    tests := []struct {
-        name     string
-        postID   int
-        userID   string
-        wantErr  bool
-        wantLen  int
-        wantLike bool
-    }{
-        {
-            name:     "Valid post with logged in user",
-            postID:   1,
-            userID:   "user1",
-            wantErr:  false,
-            wantLen:  2,
-            wantLike: true,
-        },
-        {
-            name:     "Valid post without user",
-            postID:   1,
-            userID:   "",
-            wantErr:  false,
-            wantLen:  2,
-            wantLike: false,
-        },
-        {
-            name:    "Non-existent post",
-            postID:  999,
-            userID:  "user1",
-            wantErr: false,
-            wantLen: 0,
-        },
-    }
+	// Test cases
+	tests := []struct {
+		name     string
+		postID   int
+		userID   string
+		wantErr  bool
+		wantLen  int
+		wantLike bool
+	}{
+		{
+			name:     "Valid post with logged in user",
+			postID:   1,
+			userID:   "user1",
+			wantErr:  false,
+			wantLen:  2,
+			wantLike: true,
+		},
+		{
+			name:     "Valid post without user",
+			postID:   1,
+			userID:   "",
+			wantErr:  false,
+			wantLen:  2,
+			wantLike: false,
+		},
+		{
+			name:    "Non-existent post",
+			postID:  999,
+			userID:  "user1",
+			wantErr: false,
+			wantLen: 0,
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            comments, err := GetCommentsForPost(tt.postID, tt.userID)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			comments, err := GetCommentsForPost(tt.postID, tt.userID)
 
-            if (err != nil) != tt.wantErr {
-                t.Errorf("GetCommentsForPost() error = %v, wantErr %v", err, tt.wantErr)
-                return
-            }
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetCommentsForPost() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 
-            if len(comments) != tt.wantLen {
-                t.Errorf("GetCommentsForPost() got %v comments, want %v", len(comments), tt.wantLen)
-            }
+			if len(comments) != tt.wantLen {
+				t.Errorf("GetCommentsForPost() got %v comments, want %v", len(comments), tt.wantLen)
+			}
 
-            if len(comments) > 0 && tt.userID != "" {
-                if comments[0].UserLiked != tt.wantLike {
-                    t.Errorf("GetCommentsForPost() first comment UserLiked = %v, want %v", 
-                        comments[0].UserLiked, tt.wantLike)
-                }
-            }
-        })
-    }
+			if len(comments) > 0 && tt.userID != "" {
+				if comments[0].UserLiked != tt.wantLike {
+					t.Errorf("GetCommentsForPost() first comment UserLiked = %v, want %v",
+						comments[0].UserLiked, tt.wantLike)
+				}
+			}
+		})
+	}
 }

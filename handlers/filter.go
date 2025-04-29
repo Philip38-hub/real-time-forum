@@ -114,7 +114,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var post Post
 		var categories sql.NullString
-		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.ImagePath, &categories, &post.Username, &post.CreatedAt, &post.LikeCount, &post.DislikeCount)
+		err := rows.Scan(&post.ID, &post.Title, &post.Content, &post.ImagePath, &categories, &post.Nickname, &post.CreatedAt, &post.LikeCount, &post.DislikeCount)
 		if err != nil {
 			log.Printf("Error scanning post: %v", err)
 			RenderError(w, r, "Error scanning posts", http.StatusInternalServerError)
@@ -157,7 +157,7 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		var comments []Comment
 		for commentRows.Next() {
 			var comment Comment
-			err := commentRows.Scan(&comment.ID, &comment.Content, &comment.Username, &comment.CreatedAt, &comment.LikeCount, &comment.DislikeCount)
+			err := commentRows.Scan(&comment.ID, &comment.Content, &comment.Nickname, &comment.CreatedAt, &comment.LikeCount, &comment.DislikeCount)
 			if err != nil {
 				log.Printf("Error scanning comment: %v", err)
 				RenderError(w, r, "Error scanning comments", http.StatusInternalServerError)

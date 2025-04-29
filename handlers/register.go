@@ -22,7 +22,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Age       int    `json:"age"`
 		Gender    string `json:"gender"`
 		Email     string `json:"email"`
-		Username  string `json:"username"` // This will be stored as nickname in the database
+		Nickname  string `json:"nickname"` 
 		Password  string `json:"password"`
 	}
 
@@ -33,13 +33,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate input
 	registerData.Email = strings.TrimSpace(registerData.Email)
-	registerData.Username = strings.TrimSpace(registerData.Username)
+	registerData.Nickname = strings.TrimSpace(registerData.Nickname)
 	registerData.Password = strings.TrimSpace(registerData.Password)
 	registerData.FirstName = strings.TrimSpace(registerData.FirstName)
 	registerData.LastName = strings.TrimSpace(registerData.LastName)
 
 	if registerData.FirstName == "" || registerData.LastName == "" ||
-		registerData.Email == "" || registerData.Username == "" ||
+		registerData.Email == "" || registerData.Nickname == "" ||
 		registerData.Password == "" || registerData.Gender == "" {
 		SendError(w, "All fields are required", http.StatusBadRequest)
 		return
@@ -67,14 +67,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check existing username (stored as nickname in DB)
-	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE nickname = ?", registerData.Username).Scan(&count)
+	// Check existing nickname (stored as nickname in DB)
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE nickname = ?", registerData.Nickname).Scan(&count)
 	if err != nil {
 		SendError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	if count > 0 {
-		SendError(w, "Username already taken", http.StatusConflict)
+		SendError(w, "Nickname already taken", http.StatusConflict)
 		return
 	}
 
@@ -107,7 +107,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		registerData.Age,
 		registerData.Gender,
 		registerData.Email,
-		registerData.Username, // stored as nickname in database
+		registerData.Nickname,
 		string(hashedPassword),
 	)
 	if err != nil {
@@ -133,7 +133,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
-		Path:     "/",
+		Path:     "/login",
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
@@ -148,7 +148,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			"firstName": registerData.FirstName,
 			"lastName":  registerData.LastName,
 			"email":     registerData.Email,
-			"username":  registerData.Username,
+			"nickname":  registerData.Nickname,
 		},
 	})
 }

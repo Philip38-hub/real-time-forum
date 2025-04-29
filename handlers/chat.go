@@ -151,10 +151,10 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get sender's username
-	senderName, err := GetUsernameById(session.UserID)
+	// Get sender's nickname
+	senderName, err := GetNicknameById(session.UserID)
 	if err != nil {
-		log.Printf("Error getting sender username: %v", err)
+		log.Printf("Error getting sender nickname: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -340,17 +340,17 @@ func GetUnreadMessageCount(userId string) (map[string]int, error) {
 	return counts, nil
 }
 
-// GetUsernameById retrieves a username by user ID
-func GetUsernameById(userId string) (string, error) {
-	var username string
-	err := db.QueryRow("SELECT nickname FROM users WHERE id = ?", userId).Scan(&username)
+// GetNicknameById retrieves a nickname by user ID
+func GetNicknameById(userId string) (string, error) {
+	var nickname string
+	err := db.QueryRow("SELECT nickname FROM users WHERE id = ?", userId).Scan(&nickname)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("user not found")
 		}
 		return "", err
 	}
-	return username, nil
+	return nickname, nil
 }
 
 // GetUsers gets all registered users
@@ -367,9 +367,9 @@ func GetUsers() ([]map[string]interface{}, error) {
 
 	for rows.Next() {
 		var id string
-		var username string
+		var nickname string
 
-		err := rows.Scan(&id, &username)
+		err := rows.Scan(&id, &nickname)
 		if err != nil {
 			return nil, err
 		}
@@ -381,7 +381,7 @@ func GetUsers() ([]map[string]interface{}, error) {
 
 		user := map[string]interface{}{
 			"id":       id,
-			"username": username,
+			"nickname": nickname,
 			"online":   isOnline,
 		}
 

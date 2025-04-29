@@ -23,7 +23,7 @@ class PostList {
 
     render() {
         const user = store.state.user;
-        const posts = store.state.posts;
+        const posts = store.state.posts || [];
         const categoryTitle = this.getCategoryTitle();
         
         try {
@@ -51,7 +51,7 @@ class PostList {
             <div class="post" data-post-id="${post.ID}" data-category="${post.Categories}">
                 <p class="posted-on">Posted on: ${this.formatDate(post.CreatedAt)}</p>
                 <strong>
-                    <p>${post.Username}</p>
+                    <p>${post.Nickname}</p>
                 </strong>
                 <h3>${post.Title}</h3>
                 <p>${post.Content}</p>

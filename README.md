@@ -5,7 +5,7 @@ This project is designed to create a web forum that allows users to communicate 
 
 ## Features
 - **User Authentication**: Secure access with user login and registration.
-  - **Registration**: Users can register by providing a unique email, username, and password. Passwords are encrypted before storage.
+  - **Registration**: Users can register by providing a unique email, nickname, and password. Passwords are encrypted before storage.
   - **Login**: Users can log in to access the forum. Sessions are managed using cookies with an expiration date.
   - **Session Management**: Each user can have only one active session at a time.
 

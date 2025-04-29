@@ -51,7 +51,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 			&post.Content,
 			&post.ImagePath,
 			&categories,
-			&post.Username,
+			&post.Nickname,
 			&post.CreatedAt,
 			&post.LikeCount,
 			&post.DislikeCount,

@@ -187,29 +187,29 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	err = db.QueryRow("SELECT id FROM users WHERE email = ?", githubUser.Email).Scan(&userID)
 	if err != nil {
-	    // No user found with this email
-	    if isRegister {
-	// Check if email exists with traditional login
-	var traditionalUserID string
-	err = db.QueryRow("SELECT id FROM users WHERE email = ?", githubUser.Email).Scan(&traditionalUserID)
-	if err == nil {
-	    // Email exists with traditional login
-	    RenderError(w, r, "An account with this email already exists. Please login with your password or use 'Forgot Password'.", http.StatusConflict)
-	    return
-	}
-	
-	// Create new user for registration
-			userID = uuid.New().String()
-			// Use Login (username) as fallback if Name is empty
-			username := githubUser.Name
-			if username == "" {
-			    username = githubUser.Login
+		// No user found with this email
+		if isRegister {
+			// Check if email exists with traditional login
+			var traditionalUserID string
+			err = db.QueryRow("SELECT id FROM users WHERE email = ?", githubUser.Email).Scan(&traditionalUserID)
+			if err == nil {
+				// Email exists with traditional login
+				RenderError(w, r, "An account with this email already exists. Please login with your password or use 'Forgot Password'.", http.StatusConflict)
+				return
 			}
-			
+
+			// Create new user for registration
+			userID = uuid.New().String()
+			// Use Login (nickname) as fallback if Name is empty
+			nickname := githubUser.Name
+			if nickname == "" {
+				nickname = githubUser.Login
+			}
+
 			_, err = db.Exec(`
-			INSERT INTO users (id, email, username, github_id, avatar_url)
+			INSERT INTO users (id, email, nickname, github_id, avatar_url)
 			VALUES (?, ?, ?, ?, ?)`,
-			userID, githubUser.Email, username, githubUser.ID, githubUser.AvatarURL)
+				userID, githubUser.Email, nickname, githubUser.ID, githubUser.AvatarURL)
 			if err != nil {
 				RenderError(w, r, "Failed to complete registration. Please try again.", http.StatusInternalServerError)
 				return
@@ -230,19 +230,19 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			// Get current username
-			var currentUsername string
-			err = db.QueryRow("SELECT username FROM users WHERE id = ?", userID).Scan(&currentUsername)
-			if err == nil && currentUsername == "" {
-			    // Username is empty, update it with GitHub username
-			    username := githubUser.Name
-			    if username == "" {
-			        username = githubUser.Login
-			    }
-			    _, err = db.Exec("UPDATE users SET github_id = ?, username = ? WHERE id = ?", githubUser.ID, username, userID)
+			// Get current nickname
+			var currentNickname string
+			err = db.QueryRow("SELECT nickname FROM users WHERE id = ?", userID).Scan(&currentNickname)
+			if err == nil && currentNickname == "" {
+				// Nickname is empty, update it with GitHub nickname
+				nickname := githubUser.Name
+				if nickname == "" {
+					nickname = githubUser.Login
+				}
+				_, err = db.Exec("UPDATE users SET github_id = ?, nickname = ? WHERE id = ?", githubUser.ID, nickname, userID)
 			} else {
-			    // Just update GitHub ID
-			    _, err = db.Exec("UPDATE users SET github_id = ? WHERE id = ?", githubUser.ID, userID)
+				// Just update GitHub ID
+				_, err = db.Exec("UPDATE users SET github_id = ? WHERE id = ?", githubUser.ID, userID)
 			}
 			if err != nil {
 				RenderError(w, r, "Failed to link GitHub account. Please try again.", http.StatusInternalServerError)

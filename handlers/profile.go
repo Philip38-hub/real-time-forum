@@ -15,9 +15,9 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Get user info
 	var user User
 	err := db.QueryRow(
-		"SELECT id, email, username FROM users WHERE id = ?",
+		"SELECT id, email, nickname FROM users WHERE id = ?",
 		userID,
-	).Scan(&user.ID, &user.Email, &user.Username)
+	).Scan(&user.ID, &user.Email, &user.Nickname)
 	if err != nil {
 		SendError(w, "Failed to fetch user data", http.StatusInternalServerError)
 		return
@@ -40,7 +40,7 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	// Send JSON response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"Username":     user.Username,
+		"Nickname":     user.Nickname,
 		"Email":        user.Email,
 		"CreatedPosts": createdPosts,
 		"LikedPosts":   likedPosts,
@@ -122,7 +122,7 @@ func getLikedPosts(userID string) ([]Post, error) {
 			&post.Content,
 			&post.ImagePath,
 			&categories,
-			&post.Username,
+			&post.Nickname,
 			&post.CreatedAt,
 			&post.LikeCount,
 			&post.DislikeCount,

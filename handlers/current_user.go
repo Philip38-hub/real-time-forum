@@ -39,14 +39,14 @@ func CurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch user information from the database based on session_id
-	var userID, username string
+	var userID, nickname string
 	query := `
 		SELECT u.id, u.nickname
 		FROM users u
 		JOIN sessions s ON u.id = s.user_id
 		WHERE s.session_id = ?`
 
-	err = db.QueryRow(query, cookie.Value).Scan(&userID, &username)
+	err = db.QueryRow(query, cookie.Value).Scan(&userID, &nickname)
 
 	if err == sql.ErrNoRows {
 		log.Printf("CurrentUserHandler: No valid session found in database")
@@ -66,13 +66,13 @@ func CurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("CurrentUserHandler: Successfully found user: ID=%s, username=%s", userID, username)
+	log.Printf("CurrentUserHandler: Successfully found user: ID=%s, nickname=%s", userID, nickname)
 
 	// Return user information as JSON
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"userId":        userID,
-		"username":      username,
+		"nickname":      nickname,
 		"authenticated": true,
 	})
 }

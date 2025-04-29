@@ -19,7 +19,7 @@ class Profile {
                 <div class="post-meta">
                     ${showAuthor ? `
                         <span class="author">
-                            <i class="fas fa-user"></i> ${post.Username}
+                            <i class="fas fa-user"></i> ${post.Nickname}
                         </span>
                     ` : ''}
                     ${post.Categories ? `
@@ -60,7 +60,7 @@ class Profile {
                 <div class="profile-container">
                     <div class="profile-header">
                         <h1>
-                            <i class="fas fa-user-circle"></i> ${profileData.Username}'s Profile
+                            <i class="fas fa-user-circle"></i> ${profileData.Nickname}'s Profile
                         </h1>
                         <p>
                             <i class="fas fa-envelope"></i> ${profileData.Email}

@@ -27,7 +27,7 @@ func ValidateSessionToken(sessionID string) (*Session, error) {
 		return nil, errors.New("empty session ID")
 	}
 
-	// Prepare SQL query to find a valid session     // username
+	// Prepare SQL query to find a valid session     // nickname
 	query := `
 		SELECT 
 			s.session_id, 
@@ -43,11 +43,11 @@ func ValidateSessionToken(sessionID string) (*Session, error) {
 
 	// Execute query
 	var session Session
-	var username, email string
+	var nickname, email string
 	err := db.QueryRow(query, sessionID).Scan(
 		&session.SessionID,
 		&session.UserID,
-		&username,
+		&nickname,
 		&email,
 	)
 	// Handle potential errors

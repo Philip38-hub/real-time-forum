@@ -58,8 +58,8 @@ class RegisterForm {
                     </div>
 
                     <div class="form-group">
-                        <label for="username">Nickname:</label>
-                        <input type="text" id="username" name="username" required>
+                        <label for="nickname">Nickname:</label>
+                        <input type="text" id="nickname" name="nickname" required>
                     </div>
 
                     <div class="form-row">
@@ -98,13 +98,13 @@ class RegisterForm {
             age,
             gender,
             email,
-            username,
+            nickname,
             password,
             confirm_password
         } = formData;
 
         // Check required fields
-        if (!first_name || !last_name || !age || !gender || !email || !username || !password || !confirm_password) {
+        if (!first_name || !last_name || !age || !gender || !email || !nickname || !password || !confirm_password) {
             store.setError('All fields are required');
             return false;
         }
@@ -153,7 +153,7 @@ class RegisterForm {
             age: parseInt(formData.get('age')),
             gender: formData.get('gender'),
             email: formData.get('email'),
-            username: formData.get('username'),  // This will be used as nickname in the backend
+            nickname: formData.get('nickname'),  // This will be used as nickname in the backend
             password: formData.get('password'),
             confirm_password: formData.get('confirm_password')
         };

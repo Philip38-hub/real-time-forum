@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,8 +15,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		// Parse JSON request body
 		var loginData struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
+			Identifier string `json:"identifier"`
+			Password   string `json:"password"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
@@ -23,17 +24,24 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if loginData.Email == "" || loginData.Password == "" {
-			SendError(w, "Email and password are required", http.StatusBadRequest)
+		if loginData.Identifier == "" || loginData.Password == "" {
+			SendError(w, "Identifier and password are required", http.StatusBadRequest)
 			return
 		}
 
-		// Get user from database
+		// Determine if identifier is email or nickname
 		var user User
 		var hashedPassword string
-		err := db.QueryRow("SELECT id, email, nickname, password FROM users WHERE email = ?", loginData.Email).Scan(
-			&user.ID, &user.Email, &user.Username, &hashedPassword,
-		)
+		var err error
+		if strings.Contains(loginData.Identifier, "@") {
+			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE email = ?", loginData.Identifier).Scan(
+				&user.ID, &user.Email, &user.Nickname, &hashedPassword,
+			)
+		} else {
+			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE nickname = ?", loginData.Identifier).Scan(
+				&user.ID, &user.Email, &user.Nickname, &hashedPassword,
+			)
+		}
 		if err == sql.ErrNoRows {
 			SendError(w, "Invalid credentials", http.StatusUnauthorized)
 			return
