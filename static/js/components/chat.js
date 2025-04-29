@@ -84,6 +84,7 @@ class Chat {
         this.chatToggle = document.getElementById('chat-toggle');
         this.minimizeBtn = document.getElementById('minimize-btn');
         this.closeBtn = document.getElementById('close-btn');
+        this.backButton = document.getElementById('back-button');
     }
 
     registerWebSocketHandlers() {
@@ -140,6 +141,17 @@ class Chat {
         if (this.userSearch) {
             this.userSearch.addEventListener('input', Chat.debounce((e) => this.filterUsers(e.target.value), 300));
         }
+
+        if (this.backButton) {
+            this.backButton.addEventListener('click', this.goBackToUserList.bind(this));
+        }
+    }
+
+    goBackToUserList() {
+        if (this.chatContainer) {
+            this.chatContainer.classList.remove('chat-active');
+        }
+        this.currentChatUserId = null;
     }
 
     async fetchUsers() {
@@ -224,13 +236,15 @@ class Chat {
     async openChat(user) {
         this.currentChatUserId = user.id;
 
+        if (this.chatContainer) {
+            this.chatContainer.classList.add('chat-active');
+        }
+
         if (this.chatUserName) this.chatUserName.textContent = user.username;
         if (this.chatUserStatus) {
             this.chatUserStatus.textContent = user.online ? 'Online' : 'Offline';
             this.chatUserStatus.className = `user-status ${user.online ? 'online' : 'offline'}`;
         }
-
-        if (this.chatMain) this.chatMain.classList.remove('hidden');
 
         if (this.chatMessages) this.chatMessages.innerHTML = '';
 
@@ -594,6 +608,9 @@ class Chat {
             </div>
             <div class="chat-main" id="chat-main">
                 <div class="chat-header">
+                    <button class="back-button" id="back-button">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
                     <div class="chat-header-info">
                         <h4 id="chat-user-name">User Name</h4>
                         <span id="chat-user-status" class="user-status">online</span>
