@@ -1,126 +1,154 @@
 package handlers
 
 import (
-    "encoding/json"
-    "net/http"
-    "strings"
-    "time"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"time"
 
-    "github.com/google/uuid"
-    "golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
+	if r.Method != http.MethodPost {
+		SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-    // Parse JSON request body
-    var registerData struct {
-        Email    string `json:"email"`
-        Username string `json:"username"`
-        Password string `json:"password"`
-    }
+	var registerData struct {
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Age       int    `json:"age"`
+		Gender    string `json:"gender"`
+		Email     string `json:"email"`
+		Username  string `json:"username"` // This will be stored as nickname in the database
+		Password  string `json:"password"`
+	}
 
-    if err := json.NewDecoder(r.Body).Decode(&registerData); err != nil {
-        SendError(w, "Invalid request format", http.StatusBadRequest)
-        return
-    }
+	if err := json.NewDecoder(r.Body).Decode(&registerData); err != nil {
+		SendError(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
 
-    // Validate input
-    registerData.Email = strings.TrimSpace(registerData.Email)
-    registerData.Username = strings.TrimSpace(registerData.Username)
-    registerData.Password = strings.TrimSpace(registerData.Password)
+	// Validate input
+	registerData.Email = strings.TrimSpace(registerData.Email)
+	registerData.Username = strings.TrimSpace(registerData.Username)
+	registerData.Password = strings.TrimSpace(registerData.Password)
+	registerData.FirstName = strings.TrimSpace(registerData.FirstName)
+	registerData.LastName = strings.TrimSpace(registerData.LastName)
 
-    if registerData.Email == "" || registerData.Username == "" || registerData.Password == "" {
-        SendError(w, "All fields are required", http.StatusBadRequest)
-        return
-    }
+	if registerData.FirstName == "" || registerData.LastName == "" ||
+		registerData.Email == "" || registerData.Username == "" ||
+		registerData.Password == "" || registerData.Gender == "" {
+		SendError(w, "All fields are required", http.StatusBadRequest)
+		return
+	}
 
-    // Check if email already exists
-    var count int
-    err := db.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", registerData.Email).Scan(&count)
-    if err != nil {
-        SendError(w, "Database error", http.StatusInternalServerError)
-        return
-    }
-    if count > 0 {
-        SendError(w, "Email already registered", http.StatusConflict)
-        return
-    }
+	if registerData.Age < 13 {
+		SendError(w, "You must be at least 13 years old", http.StatusBadRequest)
+		return
+	}
 
-    // Check if username already exists
-    err = db.QueryRow("SELECT COUNT(*) FROM users WHERE username = ?", registerData.Username).Scan(&count)
-    if err != nil {
-        SendError(w, "Database error", http.StatusInternalServerError)
-        return
-    }
-    if count > 0 {
-        SendError(w, "Username already taken", http.StatusConflict)
-        return
-    }
+	if registerData.Gender != "male" && registerData.Gender != "female" {
+		SendError(w, "Invalid gender selection", http.StatusBadRequest)
+		return
+	}
 
-    // Hash password
-    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerData.Password), bcrypt.DefaultCost)
-    if err != nil {
-        SendError(w, "Server error", http.StatusInternalServerError)
-        return
-    }
+	// Check existing email
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", registerData.Email).Scan(&count)
+	if err != nil {
+		SendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	if count > 0 {
+		SendError(w, "Email already registered", http.StatusConflict)
+		return
+	}
 
-    // Create user ID
-    userID := uuid.New().String()
+	// Check existing username (stored as nickname in DB)
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE nickname = ?", registerData.Username).Scan(&count)
+	if err != nil {
+		SendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	if count > 0 {
+		SendError(w, "Username already taken", http.StatusConflict)
+		return
+	}
 
-    // Start transaction
-    tx, err := db.Begin()
-    if err != nil {
-        SendError(w, "Database error", http.StatusInternalServerError)
-        return
-    }
-    defer tx.Rollback()
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerData.Password), bcrypt.DefaultCost)
+	if err != nil {
+		SendError(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 
-    // Insert new user
-    _, err = tx.Exec(
-        "INSERT INTO users (id, email, username, password) VALUES (?, ?, ?, ?)",
-        userID, registerData.Email, registerData.Username, string(hashedPassword),
-    )
-    if err != nil {
-        SendError(w, "Error creating user", http.StatusInternalServerError)
-        return
-    }
+	// Create user ID
+	userID := uuid.New().String()
 
-    // Create session
-    sessionID := uuid.New().String()
-    _, err = tx.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, userID)
-    if err != nil {
-        SendError(w, "Error creating session", http.StatusInternalServerError)
-        return
-    }
+	// Start transaction
+	tx, err := db.Begin()
+	if err != nil {
+		SendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback()
 
-    // Commit transaction
-    if err = tx.Commit(); err != nil {
-        SendError(w, "Database error", http.StatusInternalServerError)
-        return
-    }
+	// Insert new user
+	_, err = tx.Exec(
+		`INSERT INTO users 
+        (id, first_name, last_name, age, gender, email, nickname, password) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		userID,
+		registerData.FirstName,
+		registerData.LastName,
+		registerData.Age,
+		registerData.Gender,
+		registerData.Email,
+		registerData.Username, // stored as nickname in database
+		string(hashedPassword),
+	)
+	if err != nil {
+		SendError(w, "Error creating user", http.StatusInternalServerError)
+		return
+	}
 
-    // Set session cookie
-    http.SetCookie(w, &http.Cookie{
-        Name:     "session_id",
-        Value:    sessionID,
-        Path:     "/",
-        Expires:  time.Now().Add(24 * time.Hour),
-        HttpOnly: true,
-        SameSite: http.SameSiteStrictMode,
-    })
+	// Create session
+	sessionID := uuid.New().String()
+	_, err = tx.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, userID)
+	if err != nil {
+		SendError(w, "Error creating session", http.StatusInternalServerError)
+		return
+	}
 
-    // Return success response with user data
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
-        "success": true,
-        "user": User{
-            ID:       userID,
-            Email:    registerData.Email,
-            Username: registerData.Username,
-        },
-    })
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		SendError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Set session cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_id",
+		Value:    sessionID,
+		Path:     "/",
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	// Return success response with user data
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"user": map[string]interface{}{
+			"id":        userID,
+			"firstName": registerData.FirstName,
+			"lastName":  registerData.LastName,
+			"email":     registerData.Email,
+			"username":  registerData.Username,
+		},
+	})
 }
