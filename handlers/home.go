@@ -14,7 +14,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			p.id, p.title, p.content, p.image_path, 
 			GROUP_CONCAT(pc.category) as categories,
-			u.username, p.created_at,
+			u.nickname, p.created_at,
 			COALESCE(l.like_count, 0) AS like_count,
 			COALESCE(l.dislike_count, 0) AS dislike_count,
 			CASE WHEN ul.is_like = 1 THEN true WHEN ul.is_like = 0 THEN false ELSE null END as user_liked,
@@ -30,7 +30,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 			GROUP BY post_id
 		) l ON p.id = l.post_id
 		LEFT JOIN likes ul ON p.id = ul.post_id AND ul.user_id = ?
-		GROUP BY p.id, p.title, p.content, u.username, p.created_at
+		GROUP BY p.id, p.title, p.content, u.nickname, p.created_at
 		ORDER BY p.created_at DESC`
 
 	rows, err := db.Query(query, userID)

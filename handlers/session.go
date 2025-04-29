@@ -32,7 +32,7 @@ func ValidateSessionToken(sessionID string) (*Session, error) {
 		SELECT 
 			s.session_id, 
 			s.user_id,
-			u.username,   
+			u.nickname,   
 			u.email
 		FROM 
 			sessions s

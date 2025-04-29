@@ -1,94 +1,94 @@
 package handlers
 
 import (
-    "database/sql"
-    "encoding/json"
-    "net/http"
-    "time"
+	"database/sql"
+	"encoding/json"
+	"net/http"
+	"time"
 
-    "github.com/google/uuid"
-    "golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodPost {
-        // Parse JSON request body
-        var loginData struct {
-            Email    string `json:"email"`
-            Password string `json:"password"`
-        }
+	if r.Method == http.MethodPost {
+		// Parse JSON request body
+		var loginData struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
 
-        if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
-            SendError(w, "Invalid request format", http.StatusBadRequest)
-            return
-        }
+		if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
+			SendError(w, "Invalid request format", http.StatusBadRequest)
+			return
+		}
 
-        if loginData.Email == "" || loginData.Password == "" {
-            SendError(w, "Email and password are required", http.StatusBadRequest)
-            return
-        }
+		if loginData.Email == "" || loginData.Password == "" {
+			SendError(w, "Email and password are required", http.StatusBadRequest)
+			return
+		}
 
-        // Get user from database
-        var user User
-        var hashedPassword string
-        err := db.QueryRow("SELECT id, email, username, password FROM users WHERE email = ?", loginData.Email).Scan(
-            &user.ID, &user.Email, &user.Username, &hashedPassword,
-        )
-        if err == sql.ErrNoRows {
-            SendError(w, "Invalid credentials", http.StatusUnauthorized)
-            return
-        } else if err != nil {
-            SendError(w, "Database error", http.StatusInternalServerError)
-            return
-        }
+		// Get user from database
+		var user User
+		var hashedPassword string
+		err := db.QueryRow("SELECT id, email, nickname, password FROM users WHERE email = ?", loginData.Email).Scan(
+			&user.ID, &user.Email, &user.Username, &hashedPassword,
+		)
+		if err == sql.ErrNoRows {
+			SendError(w, "Invalid credentials", http.StatusUnauthorized)
+			return
+		} else if err != nil {
+			SendError(w, "Database error", http.StatusInternalServerError)
+			return
+		}
 
-        // Compare passwords
-        err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginData.Password))
-        if err != nil {
-            SendError(w, "Invalid credentials", http.StatusUnauthorized)
-            return
-        }
+		// Compare passwords
+		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginData.Password))
+		if err != nil {
+			SendError(w, "Invalid credentials", http.StatusUnauthorized)
+			return
+		}
 
-        // Check if the user is already logged in
-        var existingSessionID string
-        err = db.QueryRow("SELECT session_id FROM sessions WHERE user_id = ?", user.ID).Scan(&existingSessionID)
-        if err == nil {
-            // Delete existing session
-            _, err = db.Exec("DELETE FROM sessions WHERE user_id = ?", user.ID)
-            if err != nil {
-                SendError(w, "Database error", http.StatusInternalServerError)
-                return
-            }
-        }
+		// Check if the user is already logged in
+		var existingSessionID string
+		err = db.QueryRow("SELECT session_id FROM sessions WHERE user_id = ?", user.ID).Scan(&existingSessionID)
+		if err == nil {
+			// Delete existing session
+			_, err = db.Exec("DELETE FROM sessions WHERE user_id = ?", user.ID)
+			if err != nil {
+				SendError(w, "Database error", http.StatusInternalServerError)
+				return
+			}
+		}
 
-        // Create new session
-        sessionID := uuid.New().String()
-        _, err = db.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, user.ID)
-        if err != nil {
-            SendError(w, "Error creating session", http.StatusInternalServerError)
-            return
-        }
+		// Create new session
+		sessionID := uuid.New().String()
+		_, err = db.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, user.ID)
+		if err != nil {
+			SendError(w, "Error creating session", http.StatusInternalServerError)
+			return
+		}
 
-        // Set session cookie
-        http.SetCookie(w, &http.Cookie{
-            Name:     "session_id",
-            Value:    sessionID,
-            Path:     "/",
-            Expires:  time.Now().Add(24 * time.Hour),
-            HttpOnly: true,
-            SameSite: http.SameSiteStrictMode,
-        })
+		// Set session cookie
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session_id",
+			Value:    sessionID,
+			Path:     "/",
+			Expires:  time.Now().Add(24 * time.Hour),
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
 
-        // Return user data
-        user.Password = "" // Remove password from response
-        w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(map[string]interface{}{
-            "success": true,
-            "user":    user,
-        })
-        return
-    }
+		// Return user data
+		user.Password = "" // Remove password from response
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"user":    user,
+		})
+		return
+	}
 
-    // If not POST, return error
-    SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	// If not POST, return error
+	SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }

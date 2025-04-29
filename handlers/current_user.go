@@ -41,7 +41,7 @@ func CurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch user information from the database based on session_id
 	var userID, username string
 	query := `
-		SELECT u.id, u.username
+		SELECT u.id, u.nickname
 		FROM users u
 		JOIN sessions s ON u.id = s.user_id
 		WHERE s.session_id = ?`

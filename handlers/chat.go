@@ -278,7 +278,7 @@ func MarkMessageAsRead(messageId int64) error {
 func GetMessages(userId1 string, userId2 string, page int, limit int) ([]ChatMessage, error) {
 	offset := (page - 1) * limit
 
-	query := `SELECT pm.id, pm.sender_id, u.username, pm.receiver_id, pm.content, pm.timestamp, pm.is_read 
+	query := `SELECT pm.id, pm.sender_id, u.nickname, pm.receiver_id, pm.content, pm.timestamp, pm.is_read 
 	          FROM private_messages pm
 	          JOIN users u ON pm.sender_id = u.id
 	          WHERE (pm.sender_id = ? AND pm.receiver_id = ?) 
@@ -343,7 +343,7 @@ func GetUnreadMessageCount(userId string) (map[string]int, error) {
 // GetUsernameById retrieves a username by user ID
 func GetUsernameById(userId string) (string, error) {
 	var username string
-	err := db.QueryRow("SELECT username FROM users WHERE id = ?", userId).Scan(&username)
+	err := db.QueryRow("SELECT nickname FROM users WHERE id = ?", userId).Scan(&username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("user not found")
@@ -355,7 +355,7 @@ func GetUsernameById(userId string) (string, error) {
 
 // GetUsers gets all registered users
 func GetUsers() ([]map[string]interface{}, error) {
-	query := `SELECT id, username FROM users`
+	query := `SELECT id, nickname FROM users`
 
 	rows, err := db.Query(query)
 	if err != nil {
@@ -394,53 +394,3 @@ func GetUsers() ([]map[string]interface{}, error) {
 
 	return users, nil
 }
-
-// // GetUserIdFromSession retrieves the user ID from the session cookie
-// func GetUserIdFromSession(w http.ResponseWriter, r *http.Request) (string, error) {
-// 	// Get session cookie from request
-// 	sessionCookie, err := r.Cookie("session_id")
-// 	if err != nil {
-// 		// No cookie or invalid cookie
-// 		return "", nil // Return empty string with no error, user is not logged in
-// 	}
-
-// 	// Query to retrieve user_id based on session_id
-// 	var userID string
-// 	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
-// 	if err == sql.ErrNoRows {
-// 		// Session is invalid, clear the cookie
-// 		http.SetCookie(w, &http.Cookie{
-// 			Name:     "session_id",
-// 			Value:    "",
-// 			Path:     "/",
-// 			Expires:  time.Unix(0, 0), // Expire the cookie immediately
-// 			MaxAge:   -1,
-// 			HttpOnly: true,
-// 			Secure:   true, // Ensure it works only over HTTPS
-// 		})
-// 		return "", nil // No valid session, user is not logged in
-// 	} else if err != nil {
-// 		// Database error
-// 		http.Error(w, "Database error", http.StatusInternalServerError)
-// 		return "", err
-// 	}
-
-// 	// Return user ID if session is valid
-// 	return userID, nil
-// }
-
-// func GetSession(r *http.Request) (*Session, error) {
-//     cookie, err := r.Cookie("session_token")
-//     if err != nil {
-//         log.Printf("Session cookie error: %v", err)
-//         return nil, err
-//     }
-
-//     session, err := ValidateSessionToken(cookie.Value)
-//     if err != nil {
-//         log.Printf("Session validation error: %v", err)
-//         return nil, err
-//     }
-
-//     return session, nil
-// }
