@@ -19,13 +19,20 @@ func InitDB() {
 	// Create tables
 	createTable := `
     CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,  -- UUID as TEXT
-        email TEXT UNIQUE,
-        username TEXT,
-        password TEXT,
-        google_id TEXT,      -- Google's unique user ID
-        github_id TEXT,      -- GitHub's unique user ID
-        avatar_url TEXT      -- Profile picture URL
+        id TEXT PRIMARY KEY,          -- UUID as TEXT
+        email TEXT UNIQUE NOT NULL,
+        nickname TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        age INTEGER NOT NULL,
+        gender TEXT NOT NULL CHECK (gender IN ('male', 'female')),
+        google_id TEXT,              -- Google's unique user ID
+        github_id TEXT,               -- GitHub's unique user ID
+        avatar_url TEXT,              -- Profile picture URL
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CHECK (age >= 13)            -- Minimum age requirement
     );
 
     CREATE TABLE IF NOT EXISTS google_auth (
@@ -89,7 +96,7 @@ func InitDB() {
 
     CREATE TABLE IF NOT EXISTS sessions (
         session_id TEXT PRIMARY KEY NOT NULL,
-        user_id TEXT ,
+        user_id TEXT,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
