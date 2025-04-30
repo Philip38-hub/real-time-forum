@@ -23,12 +23,10 @@ class Header {
             </div>
             <nav>
                 ${user ? `
-                    <div class="profile-icon">
-                        <a href="/profile" class="material-icons" 
-                           style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">
-                            person
-                        </a>
-                    </div>
+                    <a href="/profile" class="material-icons" 
+                       style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">
+                        person
+                    </a>
                     <a href="/create-post" class="auth-button create-post">
                         Create Post
                     </a>

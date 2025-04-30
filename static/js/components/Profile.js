@@ -50,13 +50,8 @@ class Profile {
         try {
             store.setLoading(true);
             const profileData = await api.getProfile();
+            // Only render the profile content, not the header
             this.container.innerHTML = `
-                <header class="profile-header">
-                    <div class="logo">
-                        <a href="/" class="logo-link">Forum</a>
-                    </div>
-                </header>
-
                 <div class="profile-container">
                     <div class="profile-header">
                         <h1>
@@ -65,8 +60,13 @@ class Profile {
                         <p>
                             <i class="fas fa-envelope"></i> ${profileData.Email}
                         </p>
+                        <p>
+                            <i class="fas fa-calendar-alt"></i> Joined: ${profileData.CreatedAt ? new Date(profileData.CreatedAt).toLocaleDateString() : 'N/A'}
+                        </p>
+                        <p>
+                            <i class="fas fa-id-badge"></i> User ID: ${profileData.ID || 'N/A'}
+                        </p>
                     </div>
-
                     <div class="profile-sections">
                         <section class="profile-section">
                             <h2><i class="fas fa-pencil-alt"></i> Your Posts</h2>

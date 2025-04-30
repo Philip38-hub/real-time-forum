@@ -86,6 +86,9 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Send JSON response
 	w.Header().Set("Content-Type", "application/json")
+	if posts == nil {
+		posts = []Post{}
+	}
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":    true,
 		"posts":      posts,

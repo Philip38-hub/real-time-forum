@@ -118,14 +118,10 @@ class Router {
                     if (!Array.isArray(posts)) {
                         throw new Error('Invalid posts data received');
                     }
-                    if (posts.length > 0) {
-                        await store.setPosts(posts);
-                        // Create and render PostList
-                        const postList = new PostList();
-                        postList.render();
-                    } else {
-                        document.getElementById('main-container').innerHTML = '<p>No posts found.</p>';
-                    }
+                    await store.setPosts(posts); 
+                    // Create and render PostList
+                    const postList = new PostList();
+                    postList.render();
                 } catch (error) {
                     console.error('Failed to load posts:', error);
                     document.getElementById('main-container').innerHTML = '<p>Failed to load posts. Please try again.</p>';
