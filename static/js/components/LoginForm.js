@@ -7,7 +7,7 @@ class LoginForm {
         this.container.innerHTML = `
             <div class="auth-container">
                 <h1>Login</h1>
-                
+                <div class="error-message" style="display: none;"></div>
                 <!-- Google Sign-In Button -->
                 <a href="/auth/google/login" class="google-btn">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
@@ -50,6 +50,18 @@ class LoginForm {
         });
     }
 
+    showError(message) {
+        const errorMessageDiv = this.container.querySelector('.error-message');
+        errorMessageDiv.textContent = message;
+        errorMessageDiv.style.display = 'block';
+    }
+
+    clearError() {
+        const errorMessageDiv = this.container.querySelector('.error-message');
+        errorMessageDiv.textContent = '';
+        errorMessageDiv.style.display = 'none';
+    }
+
     async handleSubmit(event) {
         event.preventDefault();
         const form = event.target;
@@ -57,30 +69,22 @@ class LoginForm {
 
         try {
             store.setLoading(true);
-            store.setError(null);
+            this.clearError();
 
-            // Wait for login and state update to complete
             const response = await api.login(
                 formData.get('identifier'),
                 formData.get('password')
             );
 
             if (response.success) {
-                // Ensure container is cleared before navigation
                 document.querySelector('.container').innerHTML = '';
-                
-                // Navigate after login and DOM cleanup
                 await new Promise(resolve => {
                     router.navigate('/', true);
-                    // Give time for navigation to complete
                     setTimeout(resolve, 100);
                 });
-            } else {
-                store.setError(response.error || 'Login failed');
-            }
+            } 
         } catch (error) {
-            store.setError('Login failed. Please try again.');
-            console.error('Login error:', error);
+            this.showError('Login failed. Invalid credentials.');
         } finally {
             store.setLoading(false);
         }

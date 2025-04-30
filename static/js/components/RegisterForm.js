@@ -7,7 +7,7 @@ class RegisterForm {
         this.container.innerHTML = `
             <div class="auth-container">
                 <h1>Register</h1>
-
+                <div class="error-message" style="display: none;"></div>
                 <!-- Google Sign-In Button -->
                 <a href="/auth/google/login" class="google-btn">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
@@ -105,41 +105,53 @@ class RegisterForm {
 
         // Check required fields
         if (!first_name || !last_name || !age || !gender || !email || !nickname || !password || !confirm_password) {
-            store.setError('All fields are required');
+            this.showError('All fields are required');
             return false;
         }
 
         // Validate age
         if (age < 13) {
-            store.setError('You must be at least 13 years old to register');
+            this.showError('You must be at least 13 years old to register');
             return false;
         }
 
         // Validate gender
         if (!['male', 'female'].includes(gender)) {
-            store.setError('Please select a valid gender');
+            this.showError('Please select a valid gender');
             return false;
         }
 
         // Validate email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            store.setError('Please enter a valid email address');
+            this.showError('Please enter a valid email address');
             return false;
         }
 
         // Validate password
         if (password.length < 6) {
-            store.setError('Password must be at least 6 characters long');
+            this.showError('Password must be at least 6 characters long');
             return false;
         }
 
         if (password !== confirm_password) {
-            store.setError('Passwords do not match');
+            this.showError('Passwords do not match');
             return false;
         }
 
         return true;
+    }
+
+    showError(message) {
+        const errorMessageDiv = this.container.querySelector('.error-message');
+        errorMessageDiv.textContent = message;
+        errorMessageDiv.style.display = 'block';
+    }
+
+    clearError() {
+        const errorMessageDiv = this.container.querySelector('.error-message');
+        errorMessageDiv.textContent = '';
+        errorMessageDiv.style.display = 'none';
     }
 
     async handleSubmit(event) {
@@ -153,7 +165,7 @@ class RegisterForm {
             age: parseInt(formData.get('age')),
             gender: formData.get('gender'),
             email: formData.get('email'),
-            nickname: formData.get('nickname'),  // This will be used as nickname in the backend
+            nickname: formData.get('nickname'),
             password: formData.get('password'),
             confirm_password: formData.get('confirm_password')
         };
@@ -164,6 +176,7 @@ class RegisterForm {
 
         try {
             store.setLoading(true);
+            this.clearError();
             store.setError(null);
 
             // Remove confirm_password before sending to API
@@ -174,12 +187,9 @@ class RegisterForm {
             if (response.success) {
                 store.setUser(response.user);
                 router.navigate('/', true);
-            } else {
-                store.setError(response.error || 'Registration failed');
             }
         } catch (error) {
-            store.setError('Registration failed. Please try again.');
-            console.error('Registration error:', error);
+            this.showError('Registration failed. Please try again.');
         } finally {
             store.setLoading(false);
         }
