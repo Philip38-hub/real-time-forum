@@ -49,38 +49,41 @@ class Router {
     }
 
     async handleRoute() {
-        const path = window.location.pathname;
-        
-        // Find matching route
-        const route = this.routes.find(route => route.pattern.test(path));
-        
-        if (!route) {
-            this.notFoundHandler();
-            return;
-        }
-
-        // Check authentication if required
-        if (route.authRequired && !store.state.user) {
-            window.history.replaceState(null, '', '/login');
-            const loginRoute = this.routes.find(r => r.pattern.test('/login'));
-            if (loginRoute) {
-                await loginRoute.handler();
-            }
-            return;
-        }
-
-        // Extract params from URL
-        const params = path.match(route.pattern).slice(1);
-        
         try {
-            // For authenticated routes, ensure state is ready
-            if (route.authRequired) {
-                // Wait for next tick to ensure state updates are processed
-                await new Promise(resolve => setTimeout(resolve, 0));
-            }
+            const path = window.location.pathname;
             
+            // Find matching route
+            const route = this.routes.find(route => route.pattern.test(path));
+            
+            if (!route) {
+                this.notFoundHandler();
+                return;
+            }
+
+            // Check authentication if required
+            if (route.authRequired && !store.state.user) {
+                window.history.replaceState(null, '', '/login');
+                const loginRoute = this.routes.find(r => r.pattern.test('/login'));
+                if (loginRoute) {
+                    await loginRoute.handler();
+                }
+                return;
+            }
+
+            // Extract params from URL
+            const params = path.match(route.pattern).slice(1);
+            
+            // Ensure store and auth state is ready
+            await new Promise(resolve => setTimeout(resolve, 0));
+
             // Execute route handler
-            await route.handler(...params);
+            try {
+                store.setLoading(true);
+                await route.handler(...params);
+            } finally {
+                store.setLoading(false);
+            }
+
         } catch (error) {
             console.error('Route handler error:', error);
             store.setError('An error occurred while loading the page');
@@ -174,6 +177,7 @@ class Router {
 
         // Category filter
         this.addRoute('/filter', async () => {
+            this.setupContainer();
             const params = new URLSearchParams(window.location.search);
             const category = params.get('category');
             
@@ -183,16 +187,29 @@ class Router {
             }
 
             store.setLoading(true);
+            const main = document.getElementById('main-container');
             try {
-                const posts = await api.getPostsByCategory(category);
-                store.setPosts(posts);
-                new PostList().render();
+                // First try to use stored posts
+                const storedPosts = store.getCachedPosts(category);
+                if (storedPosts && store.state.currentCategory === category) {
+                    await store.setPosts(storedPosts, category);
+                    new PostList().render();
+                } else {
+                    // If no stored posts, fetch from API
+                    if (main) main.innerHTML = '<p>Loading posts...</p>';
+                    const posts = await api.getPostsByCategory(category);
+                    await store.setPosts(posts, category);
+                    new PostList().render();
+                }
             } catch (error) {
-                store.setError('Failed to load posts');
+                console.error('Failed to load filtered posts:', error);
+                if (main) {
+                    main.innerHTML = '<p>Failed to load posts. Please try again.</p>';
+                }
             } finally {
                 store.setLoading(false);
             }
-        }, { authRequired: false });
+        }, { authRequired: true });
         
     }
 }

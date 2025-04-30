@@ -3,11 +3,12 @@ class Api {
         this.baseUrl = ''; // Same origin for API calls
     }
 
-    async request(endpoint, options = {}) {      
+    async request(endpoint, options = {}) {
         const config = {
             ...options,
             headers: {
                 'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 ...options.headers
             },
             credentials: 'include'
@@ -19,30 +20,27 @@ class Api {
         }
 
         try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, config);            
-            // For JSON responses, parse and check for errors
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                const data = await response.json();
-                
-                // Handle unauthorized without redirect
-                if (response.status === 401) {
-                    store.setUser(null);
-                }
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'API request failed');
-                }
-                
-                return data;
-            }
+            const response = await fetch(`${this.baseUrl}${endpoint}`, config);
             
-            // For non-JSON responses
+            // Handle unauthorized without redirect
+            if (response.status === 401) {
+                store.setUser(null);
+                throw new Error('Unauthorized');
+            }
+
+            // For error responses
             if (!response.ok) {
                 throw new Error('API request failed');
             }
-            
-            return response;
+
+            // Always try to parse JSON for our API endpoints
+            try {
+                const data = await response.json();
+                return data;
+            } catch (parseError) {
+                console.error('Failed to parse JSON response:', parseError);
+                throw new Error('Invalid JSON response');
+            }
         } catch (error) {
             console.error('API Error:', error);
             throw error;
@@ -98,8 +96,30 @@ class Api {
     }
 
     async getPostsByCategory(category) {
-        const response = await this.request(`/filter?category=${encodeURIComponent(category)}`);
-        return response.posts;
+        try {
+            const response = await fetch(`/filter?category=${encodeURIComponent(category)}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data && data.success && Array.isArray(data.posts)) {
+                return data.posts;
+            }
+
+            console.error('Invalid filtered posts response format:', data);
+            return [];
+        } catch (error) {
+            console.error('Failed to fetch filtered posts:', error);
+            return [];
+        }
     }
 
     async createPost(formData) {

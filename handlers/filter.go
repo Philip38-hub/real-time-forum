@@ -75,25 +75,32 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Query to fetch posts based on the selected category
 	query := `
-		SELECT p.id, p.title, p.content, p.image_path, GROUP_CONCAT(pc.category) as categories, 
-		u.nickname, p.created_at, 
+		SELECT p.id, p.title, p.content, p.image_path,
+		GROUP_CONCAT(DISTINCT pc.category) as categories,
+		u.nickname, p.created_at,
 		COALESCE(l.like_count, 0) AS like_count,
 		COALESCE(l.dislike_count, 0) AS dislike_count
 		FROM posts p
 		JOIN users u ON p.user_id = u.id
 		LEFT JOIN post_categories pc ON p.id = pc.post_id
 		LEFT JOIN (
-			SELECT post_id, 
+			SELECT post_id,
 			COUNT(CASE WHEN is_like = 1 THEN 1 END) AS like_count,
 			COUNT(CASE WHEN is_like = 0 THEN 1 END) AS dislike_count
 			FROM likes
 			GROUP BY post_id
 		) l ON p.id = l.post_id
 	`
+
 	if category != "all" && category != "" {
-		query += " WHERE pc.category = ?"
+		query += ` WHERE EXISTS (
+			SELECT 1 FROM post_categories pc2
+			WHERE pc2.post_id = p.id
+			AND pc2.category = ?
+		)`
 	}
-	query += " GROUP BY p.id, p.title, p.content, u.nickname, p.created_at ORDER BY p.created_at DESC"
+
+	query += " GROUP BY p.id ORDER BY p.created_at DESC"
 
 	// Execute the query
 	var rows *sql.Rows
@@ -170,11 +177,14 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		posts = append(posts, post)
 	}
 
-	// --- JSON API RESPONSE ---
-	accept := r.Header.Get("Accept")
-	if accept == "application/json" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
-		w.Header().Set("Content-Type", "application/json")
+	// Check if this is an API request - only check XMLHttpRequest header
+	isAPIRequest := r.Header.Get("X-Requested-With") == "XMLHttpRequest"
+
+	if isAPIRequest {
+		// Return JSON response for API requests
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":          true,
 			"posts":            posts,
 			"isLoggedIn":       isLoggedIn,
 			"selectedCategory": category,
@@ -182,6 +192,8 @@ func FilterHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Error encoding JSON: %v", err)
 		}
-		return
+	} else {
+		// Serve index.html for regular page requests (like refresh)
+		http.ServeFile(w, r, "static/index.html")
 	}
 }

@@ -9,11 +9,14 @@ class Store {
                 'music', 'sports', 'beauty', 'jobs'
             ],
             currentPost: null,
+            currentCategory: null,
+            filteredPosts: new Map(), // Cache for filtered posts by category
             isLoading: false,
             error: null
         };
         this.subscribers = [];
         this.loadUser();
+        this.loadFilteredPosts(); // Load filtered posts from localStorage
     }
 
     subscribe(callback) {
@@ -57,9 +60,68 @@ class Store {
         }
     }
 
+    // Load filtered posts from localStorage
+    loadFilteredPosts() {
+        const savedData = localStorage.getItem('filteredPosts');
+        if (savedData) {
+            try {
+                const { posts, category } = JSON.parse(savedData);
+                if (Array.isArray(posts) && category) {
+                    const filteredPosts = new Map();
+                    filteredPosts.set(category, posts);
+                    this.state.filteredPosts = filteredPosts;
+                    this.state.currentCategory = category;
+                    this.state.posts = posts;
+                }
+            } catch (error) {
+                console.error('Error loading filtered posts:', error);
+            }
+        }
+    }
+
     // Posts actions
-    async setPosts(posts) {
-        await this.setState({ posts: Array.isArray(posts) ? posts : [] });
+    async setPosts(posts, category = null) {
+        const postsArray = Array.isArray(posts) ? posts : [];
+        if (category) {
+            // Keep existing filtered posts and update/add the current category
+            const filteredPosts = new Map(this.state.filteredPosts);
+            if (postsArray.length > 0) {
+                // Only update cache if we have posts
+                filteredPosts.set(category, postsArray);
+                // Save to localStorage for persistence
+                localStorage.setItem('filteredPosts', JSON.stringify({
+                    posts: postsArray,
+                    category
+                }));
+            } else if (filteredPosts.has(category)) {
+                // If no posts but category exists in cache, use cached posts
+                const cachedPosts = filteredPosts.get(category);
+                if (cachedPosts && cachedPosts.length > 0) {
+                    return await this.setState({
+                        posts: cachedPosts,
+                        currentCategory: category,
+                        filteredPosts
+                    });
+                }
+            }
+
+            await this.setState({
+                posts: postsArray,
+                currentCategory: category,
+                filteredPosts
+            });
+        } else {
+            localStorage.removeItem('filteredPosts'); // Clear saved filtered posts
+            await this.setState({
+                posts: postsArray,
+                currentCategory: null
+            });
+        }
+    }
+
+    // Get cached posts for a category
+    getCachedPosts(category) {
+        return this.state.filteredPosts.get(category);
     }
 
     addPost(post) {
