@@ -62,53 +62,57 @@ class Store {
 
     // Load filtered posts from localStorage
     loadFilteredPosts() {
-        const savedData = localStorage.getItem('filteredPosts');
-        if (savedData) {
-            try {
+        try {
+            // Clear existing cache first
+            this.state.filteredPosts = new Map();
+            localStorage.removeItem('filteredPosts');
+            
+            const savedData = localStorage.getItem('filteredPosts');
+            if (savedData) {
                 const { posts, category } = JSON.parse(savedData);
                 if (Array.isArray(posts) && category) {
+                    // Only restore cache if both posts and category are valid
                     const filteredPosts = new Map();
                     filteredPosts.set(category, posts);
                     this.state.filteredPosts = filteredPosts;
                     this.state.currentCategory = category;
                     this.state.posts = posts;
                 }
-            } catch (error) {
-                console.error('Error loading filtered posts:', error);
             }
+        } catch (error) {
+            console.error('Error loading filtered posts:', error);
+            // Clear cache on error
+            this.state.filteredPosts = new Map();
+            localStorage.removeItem('filteredPosts');
         }
     }
 
     // Posts actions
     async setPosts(posts, category = null) {
         const postsArray = Array.isArray(posts) ? posts : [];
+        
         if (category) {
-            // Keep existing filtered posts and update/add the current category
-            const filteredPosts = new Map(this.state.filteredPosts);
+            // Clear the cache when explicitly setting posts for a category
+            const filteredPosts = new Map();
+            
             if (postsArray.length > 0) {
-                // Only update cache if we have posts
+                // Only cache if we have posts
                 filteredPosts.set(category, postsArray);
-                // Save to localStorage for persistence
+                // Update localStorage with new data
                 localStorage.setItem('filteredPosts', JSON.stringify({
                     posts: postsArray,
                     category
                 }));
-            } else if (filteredPosts.has(category)) {
-                // If no posts but category exists in cache, use cached posts
-                const cachedPosts = filteredPosts.get(category);
-                if (cachedPosts && cachedPosts.length > 0) {
-                    return await this.setState({
-                        posts: cachedPosts,
-                        currentCategory: category,
-                        filteredPosts
-                    });
-                }
+            } else {
+                // Clear localStorage if no posts
+                localStorage.removeItem('filteredPosts');
             }
 
+            // Always update state with the new posts
             await this.setState({
                 posts: postsArray,
                 currentCategory: category,
-                filteredPosts
+                filteredPosts: new Map(filteredPosts) // Create new Map to trigger updates
             });
         } else {
             localStorage.removeItem('filteredPosts'); // Clear saved filtered posts

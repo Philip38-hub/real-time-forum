@@ -97,10 +97,13 @@ class Api {
 
     async getPostsByCategory(category) {
         try {
+            // Use fetch directly with proper headers
             const response = await fetch(`/filter?category=${encodeURIComponent(category)}`, {
+                method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Cache-Control': 'no-cache'
                 },
                 credentials: 'include'
             });
@@ -111,7 +114,11 @@ class Api {
 
             const data = await response.json();
             if (data && data.success && Array.isArray(data.posts)) {
-                return data.posts;
+                // Remove any duplicates by ID
+                const uniquePosts = Array.from(
+                    new Map(data.posts.map(post => [post.ID, post])).values()
+                );
+                return uniquePosts;
             }
 
             console.error('Invalid filtered posts response format:', data);
