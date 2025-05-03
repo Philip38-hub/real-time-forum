@@ -10,6 +10,17 @@ import (
     "forum/handlers"
 )
 
+// Define valid frontend routes
+var validFrontendRoutes = map[string]bool{
+    "/":              true,
+    "/login":         true,
+    "/register":      true,
+    "/profile":       true,
+    "/post":          true,
+    "/posts":         true,
+    "/messages":      true,
+}
+
 func main() {
     args := os.Args
     if len(args) != 1 {
@@ -41,38 +52,62 @@ func handler(w http.ResponseWriter, r *http.Request) {
     }
 
     // Check if the request matches the "/api/messages" prefix
-	if strings.HasPrefix(r.URL.Path, "/api/messages/") {
-		// Get the part after "/api/messages/"
-		remainingPath := strings.TrimPrefix(r.URL.Path, "/api/messages/")
+    if strings.HasPrefix(r.URL.Path, "/api/messages/") {
+        remainingPath := strings.TrimPrefix(r.URL.Path, "/api/messages/")
 
-		// Handle specific cases based on the remaining path
-		switch remainingPath {
-		case "send":
-			handlers.SendMessageHandler(w, r)
-		case "users":
-			handlers.GetUsersHandler(w, r)
-		case "mark-read":
-			handlers.MarkMessageAsReadHandler(w, r)
-		default:
-			// Handle "/api/messages/{userId}" case
-			handlers.GetMessagesHandler(w, r)
-		}
-		return
-	}
+        // Handle specific cases based on the remaining path
+        switch remainingPath {
+        case "send":
+            handlers.SendMessageHandler(w, r)
+        case "users":
+            handlers.GetUsersHandler(w, r)
+        case "mark-read":
+            handlers.MarkMessageAsReadHandler(w, r)
+        default:
+            // Handle "/api/messages/{userId}" case
+            handlers.GetMessagesHandler(w, r)
+        }
+        return
+    }
 
     // API endpoints (only for correct methods)
     if isAPIEndpoint(r.URL.Path) {
         // Only handle /login as API for POST, otherwise serve SPA
         if (r.URL.Path == "/login" || r.URL.Path == "/register") && r.Method != http.MethodPost {
-            http.ServeFile(w, r, "static/index.html")
+            if isValidFrontendRoute(r.URL.Path) {
+                http.ServeFile(w, r, "static/index.html")
+            } else {
+                http.NotFound(w, r)
+            }
             return
         }
         handleAPI(w, r)
         return
     }
 
-    // For all other routes, serve the SPA (index.html)
-    http.ServeFile(w, r, "static/index.html")
+    // Check if it's a valid frontend route before serving the SPA
+    if isValidFrontendRoute(r.URL.Path) {
+        http.ServeFile(w, r, "static/index.html")
+    } else {
+        http.NotFound(w, r)
+    }
+}
+
+// isValidFrontendRoute checks if the given path is a registered frontend route
+func isValidFrontendRoute(path string) bool {
+    // Check if path is directly in our map
+    if validFrontendRoutes[path] {
+        return true
+    }
+    
+    // Also check for paths with IDs (like /profile/123)
+    for route := range validFrontendRoutes {
+        if route != "/" && strings.HasPrefix(path, route+"/") {
+            return true
+        }
+    }
+    
+    return false
 }
 
 func isAPIEndpoint(path string) bool {
