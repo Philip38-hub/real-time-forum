@@ -22,19 +22,20 @@ class Header {
                 <a href="/" class="logo-link">Forum</a>
             </div>
             <nav>
-                ${user ? `
-                    <a href="/profile" class="material-icons" 
-                       style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">
-                        person
-                    </a>
-                    <a href="/create-post" class="auth-button create-post">
-                        Create Post
-                    </a>
-                    <a href="#" class="logout-icon" title="Logout">
-                        <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A7C8C; margin-top: 10px;"></i>
-                    </a>
+            ${user ? `
+                <a href="/profile" class="material-icons" 
+                   style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">
+                    person
+                </a>
+                <a href="/create-post" class="auth-button create-post">
+                    <span class="create-post-text">Create Post</span>
+                    <span class="create-post-icon"><i class="fas fa-plus"></i></span>
+                </a>
+                <a href="#" class="logout-icon" title="Logout">
+                    <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A7C8C; margin-top: 10px;"></i>
+                </a>
                 ` : `
-                    <a href="/register" class="auth-button register">Register</a>
+                <a href="/register" class="auth-button register">Register</a>
                 `}
             </nav>
         `;
@@ -79,9 +80,15 @@ class Header {
         event.preventDefault();
         try {
             store.setLoading(true);
-            await api.logout();
+            await api.logout(); // Using our fixed logout method
+            
+            // Update local state to reflect logged out status
+            store.setUser(null);
+            
+            // Navigate to login page
             router.navigate('/login', true);
         } catch (error) {
+            console.error('Logout error:', error);
             store.setError('Logout failed. Please try again.');
         } finally {
             store.setLoading(false);

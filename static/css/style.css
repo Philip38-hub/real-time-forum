@@ -218,16 +218,16 @@ header {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* #main-container {
-    border-top: 3px solid var(--border-color);
+#main-container {
     background: #fff;
     min-height: 60vh;
+    min-width: 600px;
     border-radius: 0 0 10px 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-    padding: 32px 24px 24px 24px;
-    margin-top: 0;
+    /* padding: 0px 24px 24px 24px; */
+    margin-top: 100px;
     transition: border-color 0.2s;
-} */
+}
 
 .logo {
     flex-shrink: 0;
@@ -292,6 +292,19 @@ header {
 
 .material-icons:hover {
     text-decoration: none;
+}
+
+.logout-icon {
+    text-decoration: none;
+}
+
+/* Create Post Button Text & Icon */
+.create-post-text {
+    display: inline;
+}
+
+.create-post-icon {
+    display: none;
 }
 
 .container {
@@ -375,7 +388,7 @@ main {
     padding: 20px;
     width: 100%;
     max-width: 800px;
-    margin-top: 100px;
+    margin-top: 10px;
     border-radius: 5px;
     box-shadow: 0 2px 4px rgba(179, 179, 179, 0.1);
 }
@@ -677,15 +690,12 @@ img {
 
 .hamburger {
     display: none;
-    /* Hide by default */
     cursor: pointer;
     padding: 10px;
     margin-right: 10px;
-    /* Add spacing between hamburger and logo */
     font-size: 24px;
-    /* Adjust icon size */
     color: var(--primary-color);
-    /* Icon color */
+    transition: color 0.3s ease;
 }
 
 .error-container {
@@ -748,6 +758,43 @@ img {
 
 /* Media Queries */
 @media (max-width: 768px) {
+    /* General spacing reduction */
+    nav {
+        gap: 8px;
+    }
+    
+    /* Reduce the person icon size */
+    .material-icons[href="/profile"] {
+        font-size: 24px !important;
+        margin-top: 5px !important;
+    }
+    
+    /* Reduce the logout icon size */
+    .logout-icon .fas.fa-sign-out-alt {
+        font-size: 20px !important;
+        margin-top: 5px !important;
+    }
+
+     /* Adjust Create Post button */
+     .auth-button.create-post {
+        padding: 6px;
+    }
+    
+    /* Show icon, hide text for create post button when space is limited */
+    .create-post-text {
+        display: none;
+    }
+    
+    .create-post-icon {
+        display: inline;
+    }
+    
+    #main-container {
+        padding: 18px 6px 6px 6px;
+        border-radius: 0 0 6px 6px;
+        min-width: 300px;
+    }
+
     header {
         display: flex;
         flex-direction: row;
@@ -773,15 +820,6 @@ img {
 
     .auth-button.create-post {
         padding: 5px;
-    }
-
-    nav {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        /* Center nav items vertically */
-        gap: 10px;
-        /* Add spacing between nav items */
     }
 
     nav a {
@@ -818,26 +856,6 @@ img {
 
     .sidebar.active {
         display: block;
-    }
-}
-
-@media (max-width: 700px) {
-    #main-container {
-        padding: 18px 6px 12px 6px;
-        border-radius: 0 0 6px 6px;
-    }
-}
-
-@media (min-width: 700px) {
-    .profile-sections {
-        flex-direction: row;
-        gap: 40px;
-        flex: 1 1 0%;
-        min-width: 0;
-    }
-    .profile-section {
-        flex: 1 1 0%;
-        min-width: 0;
     }
 }
 

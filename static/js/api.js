@@ -75,10 +75,28 @@ class Api {
     }
 
     async logout() {
-        await this.request('/logout', { method: 'POST' });
-        store.setUser(null);
+        try {
+            // The server is returning a redirect, not JSON
+            const response = await fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            });
+            
+            // Don't try to parse JSON, just check if response was successful
+            if (response.ok) {
+                store.setUser(null);
+                return true;
+            } else {
+                throw new Error(`Logout failed with status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+            throw error;
+        }
     }
-
     // Post endpoints
     async getPosts() {
         try {

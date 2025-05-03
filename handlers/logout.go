@@ -1,11 +1,18 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 )
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Only handle POST requests
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Get the session cookie
 	sessionCookie, err := r.Cookie("session_id")
 	if err == nil {
@@ -27,6 +34,8 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	// Redirect to home page
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	// Return a JSON response instead of redirecting
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
