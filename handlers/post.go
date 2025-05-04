@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"io"
 	"log"
 	"net/http"
@@ -120,6 +121,8 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Redirect to the posts page after successful creation
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	// Return a JSON response instead of redirecting
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }
