@@ -152,6 +152,9 @@ class Chat {
             this.chatContainer.classList.remove('chat-active');
         }
         this.currentChatUserId = null;
+
+        // Refresh the users list when going back
+        this.fetchUsers();
     }
 
     async fetchUsers() {
@@ -628,7 +631,17 @@ class Chat {
                 </div>
             </div>
         `;
+        // Initialize all Dom elements
         this.initElements();
+
+        // Initialize the chat functionality
+        this.initializeChat().then(success => {
+            if (success) {
+                logger.info('[Chat] Successfully initialized after render');
+            } else {
+                logger.error('[Chat] Failed to initialize after render');
+            }
+        });
     }
 
     static throttle(callback, delay) {
