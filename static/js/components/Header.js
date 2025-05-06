@@ -23,16 +23,17 @@ class Header {
             </div>
             <nav>
             ${user ? `
-                <a href="/profile" class="material-icons" 
-                   style="font-size:30px; color: #4A7C8C; margin-top: 10px; vertical-align: middle;">
-                    person
+                <a href="/profile" 
+                   style="display: flex; align-items: center; gap: 8px; color: #4A76a8;">
+                    <span style="font-size: 18px; margin-top: 10px;">Welcome, ${user.Nickname}</span>
+                    <span class="material-icons" style="font-size: 30px; margin-top: 10px; vertical-align: middle;">person</span>                  
                 </a>
                 <a href="/create-post" class="auth-button create-post">
                     <span class="create-post-text">Create Post</span>
                     <span class="create-post-icon"><i class="fas fa-plus"></i></span>
                 </a>
                 <a href="#" class="logout-icon" title="Logout">
-                    <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A7C8C; margin-top: 10px;"></i>
+                    <i class="fas fa-sign-out-alt" style="font-size: 24px; color: #4A76a8; margin-top: 10px;"></i>
                 </a>
                 ` : `
                 <a href="/register" class="auth-button register">Register</a>
@@ -67,7 +68,7 @@ class Header {
 
         const mainContainer = document.getElementById('main-container');
         const currentForm = mainContainer.querySelector('.create-post-form');
-        
+
         if (currentForm) {
             mainContainer.removeChild(currentForm);
             return;
@@ -81,10 +82,10 @@ class Header {
         try {
             store.setLoading(true);
             await api.logout(); // Using our fixed logout method
-            
+
             // Update local state to reflect logged out status
             store.setUser(null);
-            
+
             // Navigate to login page
             router.navigate('/login', true);
         } catch (error) {
