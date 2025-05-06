@@ -57,6 +57,7 @@ class Chat {
             return true;
         } catch (error) {
             logger.error('Error initializing chat:', error);
+            return false;
         }
     }
 
@@ -326,7 +327,8 @@ class Chat {
 
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
-            const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const formattedDate = date.toLocaleTimeString([],
+                { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const sender = msg.senderName || (isSent ? this.currentNickname : this.getChatUserName());
 
             const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
