@@ -26,8 +26,7 @@ class Chat {
         this.unreadCountElement = null;
         this.typingIndicator = null;
         this.chatToggle = null;
-        this.minimizeBtn = null;
-        this.closeBtn = null;
+        this.backButton = null;
     }
 
     async initializeChat() {
@@ -82,8 +81,6 @@ class Chat {
         this.unreadCountElement = document.getElementById('unread-count');
         this.typingIndicator = document.getElementById('typing-indicator');
         this.chatToggle = document.getElementById('chat-toggle');
-        this.minimizeBtn = document.getElementById('minimize-btn');
-        this.closeBtn = document.getElementById('close-btn');
         this.backButton = document.getElementById('back-button');
     }
 
