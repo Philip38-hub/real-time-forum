@@ -1,27 +1,56 @@
 # Web Forum Project
 
 ## Project Overview
-This project is designed to create a web forum that allows users to communicate by creating posts and comments. Key features include liking/disliking posts and comments, associating categories with posts, and filtering posts based on various criteria.
+This project aims to build an enhanced web forum where users can interact through posts, comments, and private messages—all in real time. The forum will support live discussions via WebSockets and maintain a seamless user experience with a single-page application architecture.
 
 ## Features
-- **User Authentication**: Secure access with user login and registration.
-  - **Registration**: Users can register by providing a unique email, nickname, and password. Passwords are encrypted before storage.
-  - **Login**: Users can log in to access the forum. Sessions are managed using cookies with an expiration date.
-  - **Session Management**: Each user can have only one active session at a time.
+### User Authentication
 
-- **Post Management**: Create and view post(s), .
-- **Comments**: Registered users can comment on posts, fostering discussion.
-- **Likes and Dislikes**: Registered users can like or dislike posts and comments. The number of likes and dislikes is visible to all users.
-- **Filtering**: Users can filter posts by categories, created posts, and liked posts.
+#### Enhanced Registration:
+   - Required fields: Nickname, Age, Gender, First Name, Last Name, Email, Password
+   - Email verification (bonus feature)
+   - Password encryption using bcrypt
+
+#### Flexible Login:
+   - Login via nickname OR email + password
+   - Single active session enforcement
+   - Persistent sessions with secure cookies
+
+### Content Management
+
+#### Posts:
+   - Category-based organization
+   - Rich text formatting (markdown support)
+   - Real-time updates when new posts are created
+
+#### Comments:
+   - Nested comment threads
+   - Live updates without page refresh
+   - @mention notifications
+
+### Private Messaging
+
+#### Real-time Chat:
+   - Online/offline user indicators
+   - Message history with infinite scroll (10 messages per load)
+   - Typing indicators
+   - Read receipts
+   - Organized by last message activity
+
+#### Chat Interface:
+   - Persistent sidebar showing online users
+   - Responsive design (collapses to bubble on smaller screens)
+   - Message formatting with timestamps
 
 ## Technologies Used
 
-- **Backend**: Go (Golang)
-- **Database**: SQLite
+- **Backend**: Go (Golang) with webSockets
+- **Database**: SQLite for data storage
 - **Frontend**: HTML, CSS, JavaScript (no frameworks or libraries)
 - **Containerization**: Docker
 - **Password Encryption**: bcrypt (Bonus)
 - **Session Management**: UUID (Bonus)
+- **WebSockets**: Used in both backend and frontend for live interactions
 
 ---
 ## Setup Instructions
@@ -34,10 +63,10 @@ This project is designed to create a web forum that allows users to communicate 
 To install this project, follow these steps:
 1. Clone the repository: 
    ```bash
-   git clone https://learn.zone01kisumu.ke/git/hanapiko/forum
+   git clone https://learn.zone01kisumu.ke/git/pochieng/real-time-forum
 2. Navigate to the project directory:
    ```bash
-   cd forum
+   cd real-time-forum
    ```
 3. Install the required dependencies:
    ```bash
@@ -68,7 +97,7 @@ To run tests, use:
 go test ./...
 ```
 Common issues:
-- **Port Conflict**: If you see a "port already in use" error, check for other applications using port 8080.
+- **Port Conflict**: If you see a "port already in use" error, check for other applications using port 8081.
 - **Database Issues**: Verify your database configuration if you encounter connection problems.
 
 ## Contributing
@@ -79,10 +108,8 @@ We welcome contributions! Please follow these guidelines:
 
 
 ## Authors
-- antmusumba - [GitHub Profile](https://github.com/antmusumba)
-- weakinyi - [GitHub Profile](https://github.com/Wendy-Tabitha)
-- Philip38-hub - [GitHub Profile](https://github.com/Philip38-hub)
-- hanapiko - [GitHub Profile](https://github.com/hanapiko)
+- Philip Ochieng - [GitHub Profile](https://github.com/Philip38-hub)
+- Stephen Kisengese - [GitHub Profile](https://github.com/stkisengese)
 
 
 
