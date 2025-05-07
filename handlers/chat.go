@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -393,4 +394,51 @@ func GetUsers() ([]map[string]interface{}, error) {
 	}
 
 	return users, nil
+}
+
+// GetLastMessageTimes retrieves the most recent message timestamps for a given user.
+// It returns a map where the keys are the IDs of other users who have communicated
+// with the specified user, and the values are the timestamps of the last message
+// exchanged with each of those users.
+func GetLastMessageTimes(userId string) (map[string]time.Time, error) {
+	query := `
+    SELECT 
+        CASE 
+            WHEN sender_id = ? THEN receiver_id 
+            ELSE sender_id 
+        END as other_user_id,
+        MAX(timestamp) as last_timestamp
+    FROM private_messages
+    WHERE sender_id = ? OR receiver_id = ?
+    GROUP BY other_user_id
+    ORDER BY last_timestamp DESC
+    `
+
+	rows, err := db.Query(query, userId, userId, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	timestamps := make(map[string]time.Time)
+	for rows.Next() {
+		var otherUserId string
+		var timestampStr string
+
+		err := rows.Scan(&otherUserId, &timestampStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse with the exact format including nanoseconds and timezone
+		const layout = "2006-01-02 15:04:05.999999999-07:00"
+		timestamp, err := time.Parse(layout, timestampStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse timestamp '%s': %v", timestampStr, err)
+		}
+
+		timestamps[otherUserId] = timestamp
+	}
+
+	return timestamps, nil
 }
