@@ -26,8 +26,7 @@ class Chat {
         this.unreadCountElement = null;
         this.typingIndicator = null;
         this.chatToggle = null;
-        this.minimizeBtn = null;
-        this.closeBtn = null;
+        this.backButton = null;
     }
 
     async initializeChat() {
@@ -58,6 +57,7 @@ class Chat {
             return true;
         } catch (error) {
             logger.error('Error initializing chat:', error);
+            return false;
         }
     }
 
@@ -82,8 +82,6 @@ class Chat {
         this.unreadCountElement = document.getElementById('unread-count');
         this.typingIndicator = document.getElementById('typing-indicator');
         this.chatToggle = document.getElementById('chat-toggle');
-        this.minimizeBtn = document.getElementById('minimize-btn');
-        this.closeBtn = document.getElementById('close-btn');
         this.backButton = document.getElementById('back-button');
     }
 
@@ -116,14 +114,6 @@ class Chat {
     attachEventListeners() {
         if (this.chatToggle) {
             this.chatToggle.addEventListener('click', this.toggleChatContainer.bind(this));
-        }
-
-        if (this.minimizeBtn) {
-            this.minimizeBtn.addEventListener('click', this.minimizeChat.bind(this));
-        }
-
-        if (this.closeBtn) {
-            this.closeBtn.addEventListener('click', this.closeChat.bind(this));
         }
 
         if (this.chatForm) {
@@ -163,6 +153,7 @@ class Chat {
             if (response.success) {
                 this.users = response.users;
 
+                // Update the unread messages from server data
                 response.users.forEach(user => {
                     if (user.unread > 0) {
                         this.unreadMessages[user.id] = user.unread;
@@ -329,7 +320,8 @@ class Chat {
 
             const timestamp = msg.timestamp || new Date().toISOString();
             const date = new Date(timestamp);
-            const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const formattedDate = date.toLocaleTimeString([],
+                { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const sender = msg.senderName || (isSent ? this.currentNickname : this.getChatUserName());
 
             const readStatus = isSent ? this.getReadStatusHtml(msg.is_read) : '';
@@ -465,6 +457,7 @@ class Chat {
         if (this.unreadMessages[userId]) {
             this.unreadMessages[userId] = 0;
             this.updateUnreadCount();
+            this.renderUsers(); // Re-render users to remove unread indicator
         }
     }
 
@@ -579,15 +572,40 @@ class Chat {
     }
 
     toggleChatContainer() {
-        // TO DO: implement toggleChatContainer
-    }
+        if (!this.chatContainer) return;
 
-    minimizeChat() {
-        // TO DO: implement minimizeChat
-    }
+        // If we're in a chat conversation, go back to the user list first
+        if (this.chatContainer.classList.contains('chat-active')) {
+            this.goBackToUserList();
+            return;
+        }
 
-    closeChat() {
-        // TO DO: implement closeChat
+        const isCurrentlyExpanded = this.chatContainer.classList.contains('chat-expanded');
+        if (isCurrentlyExpanded) { // If currently expanded, collapse it
+            this.chatContainer.classList.remove('chat-expanded');
+
+            if (this.chatToggle) {
+                const icon = this.chatToggle.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-comments'; // Update button icon
+                }
+            }
+        } else { // expand it
+            this.chatContainer.classList.add('chat-expanded');
+            this.chatContainer.classList.remove('chat-hidden');
+            this.chatContainer.style.display = ''; // Remove any display:none
+
+            if (this.chatToggle) {
+                const icon = this.chatToggle.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-times'; // Update button icon
+                }
+            }
+        }
+
+        // Store the state in localStorage for persistence across page loads
+        localStorage.setItem('chat-expanded', (!isCurrentlyExpanded).toString());
+        logger.info(`Chat container ${!isCurrentlyExpanded ? 'expanded' : 'collapsed'}`);
     }
 
     render() {
@@ -598,6 +616,13 @@ class Chat {
             return;
         }
         console.log('[Chat] rendering into', chatContainer);
+
+        // Check if we should restore expanded state from previous session
+        const wasExpanded = localStorage.getItem('chat-expanded') === 'true';
+        if (wasExpanded) {
+            chatContainer.classList.add('chat-expanded');
+        }
+
         chatContainer.innerHTML = `
             <div class="chat-sidebar">
                 <h3>Messages</h3>
@@ -630,8 +655,14 @@ class Chat {
                     </form>
                 </div>
             </div>
+
+            <!-- Chat toggle button for mobile/responsive view -->
+            <button id="chat-toggle" class="chat-toggle">
+                <i class="fas fa-${wasExpanded ? 'times' : 'comments'}"></i>
+                <span class="unread-count hidden" id="unread-count">0</span>
+            </button>
         `;
-        // Initialize all Dom elements
+        // Initialize all DOM elements
         this.initElements();
 
         // Initialize the chat functionality

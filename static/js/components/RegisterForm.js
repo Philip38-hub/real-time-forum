@@ -185,8 +185,7 @@ class RegisterForm {
             const response = await api.register(registrationData);
 
             if (response.success) {
-                store.setUser(response.user);
-                router.navigate('/', true);
+                router.navigate('/login', true);
             }
         } catch (error) {
             this.showError('Registration failed. Please try again.');
