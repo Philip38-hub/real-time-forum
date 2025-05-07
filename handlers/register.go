@@ -3,11 +3,32 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// Email validation regex
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+// Username validation regex - starts with a letter, 3-30 chars, only allowed characters
+var usernameRegex = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9._-]{2,29}$`)
+
+// List of reserved usernames that should not be allowed
+var reservedUsernames = map[string]bool{
+	"admin":         true,
+	"administrator": true,
+	"moderator":     true,
+	"mod":           true,
+	"support":       true,
+	"help":          true,
+	"system":        true,
+	"official":      true,
+	"staff":         true,
+	"root":          true,
+}
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -54,26 +75,60 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check existing email
+	// Validate email format
+	if !emailRegex.MatchString(registerData.Email) {
+		SendError(w, "Invalid email format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate nickname/username format
+	if !usernameRegex.MatchString(registerData.Nickname) {
+		SendError(w,
+			"Invalid username format. Username must start with a letter, contain only letters, numbers, underscores, periods, and hyphens, and be between 3-30 characters.",
+			http.StatusBadRequest)
+		return
+	}
+
+	// Check if nickname contains @ symbol
+	if strings.Contains(registerData.Nickname, "@") {
+		SendError(w, "Username cannot contain @ symbol", http.StatusBadRequest)
+		return
+	}
+
+	// Check if nickname is a reserved word
+	if reservedUsernames[strings.ToLower(registerData.Nickname)] {
+		SendError(w, "This username is reserved and cannot be used", http.StatusBadRequest)
+		return
+	}
+
+	// Validate password length
+	if len(registerData.Password) < 8 {
+		SendError(w, "Password must be at least 8 characters long", http.StatusBadRequest)
+		return
+	}
+
+	// Check existing email (case insensitive)
 	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE email = ?", registerData.Email).Scan(&count)
+	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?)", registerData.Email).Scan(&count)
 	if err != nil {
 		SendError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+
 	if count > 0 {
 		SendError(w, "Email already registered", http.StatusConflict)
 		return
 	}
 
-	// Check existing nickname (stored as nickname in DB)
-	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE nickname = ?", registerData.Nickname).Scan(&count)
+	// Check existing nickname (case insensitive)
+	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE LOWER(nickname) = LOWER(?)", registerData.Nickname).Scan(&count)
 	if err != nil {
 		SendError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+
 	if count > 0 {
-		SendError(w, "Nickname already taken", http.StatusConflict)
+		SendError(w, "Username already taken", http.StatusConflict)
 		return
 	}
 
@@ -97,16 +152,16 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Insert new user
 	_, err = tx.Exec(
-		`INSERT INTO users 
-        (id, first_name, last_name, age, gender, email, nickname, password) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO users
+		(id, first_name, last_name, age, gender, email, nickname, password)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		userID,
 		registerData.FirstName,
 		registerData.LastName,
 		registerData.Age,
 		registerData.Gender,
 		registerData.Email,
-		registerData.Nickname,
+		registerData.Nickname, // Keep original case for display purposes
 		string(hashedPassword),
 	)
 	if err != nil {
