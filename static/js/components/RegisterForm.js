@@ -1,6 +1,8 @@
 class RegisterForm {
     constructor() {
         this.container = document.querySelector('.container');
+        this.usernameRegex = /^[a-zA-Z][a-zA-Z0-9._-]{2,29}$/; // Username validation pattern
+        this.emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/; // Email validation pattern
     }
 
     render() {
@@ -55,21 +57,35 @@ class RegisterForm {
                     <div class="form-group">
                         <label for="email">Email:</label>
                         <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
+                        <div id="email-feedback" class="feedback-message"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="nickname">Nickname:</label>
+                        <label for="nickname">Username:</label>
                         <input type="text" id="nickname" name="nickname" required>
+                        <div class="form-hint">
+                            Username requirements:
+                            <ul>
+                                <li>Start with a letter</li>
+                                <li>3-30 characters long</li>
+                                <li>Only letters, numbers, underscores, periods, and hyphens</li>
+                                <li>No @ symbols allowed</li>
+                            </ul>
+                        </div>
+                        <div id="nickname-feedback" class="feedback-message"></div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="password">Password:</label>
-                            <input type="password" id="password" name="password" required>
+                            <input type="password" id="password" name="password" required minlength="8">
+                            <div class="form-hint">Password must be at least 8 characters</div>
+                            <div id="password-strength" class="password-strength"></div>
                         </div>
                         <div class="form-group">
                             <label for="confirm_password">Confirm Password:</label>
                             <input type="password" id="confirm_password" name="confirm_password" required>
+                            <div id="password-match" class="feedback-message"></div>
                         </div>
                     </div>
 
@@ -78,6 +94,15 @@ class RegisterForm {
                 <p>Already have an account? <a href="/login">Login here</a></p>
             </div>
         `;
+
+        // Add event listeners for real-time validation
+        this.container.querySelector('#nickname').addEventListener('input', (e) => this.validateNickname(e.target));
+        this.container.querySelector('#email').addEventListener('input', (e) => this.validateEmail(e.target));
+        this.container.querySelector('#password').addEventListener('input', (e) => {
+            this.validatePasswordStrength(e.target);
+            this.validatePasswordMatch();
+        });
+        this.container.querySelector('#confirm_password').addEventListener('input', () => this.validatePasswordMatch());
 
         // Add OAuth button handlers
         this.container.querySelector('.google-btn').addEventListener('click', (e) => {
@@ -89,6 +114,128 @@ class RegisterForm {
             e.preventDefault();
             window.location.href = '/auth/github/login';
         });
+    }
+
+    validateNickname(input) {
+        const nickname = input.value.trim();
+        const feedbackElement = document.getElementById('nickname-feedback');
+
+        // Clear previous feedback
+        feedbackElement.textContent = '';
+        feedbackElement.className = 'feedback-message';
+
+        if (!nickname) {
+            return;
+        }
+
+        // Check if contains @ symbol
+        if (nickname.includes('@')) {
+            feedbackElement.textContent = 'Username cannot contain @ symbol';
+            feedbackElement.className = 'feedback-message error';
+            input.setCustomValidity('Username cannot contain @ symbol');
+            return;
+        }
+
+        // Check regex pattern
+        if (!this.usernameRegex.test(nickname)) {
+            feedbackElement.textContent = 'Username must start with a letter and contain only letters, numbers, underscores, periods, and hyphens';
+            feedbackElement.className = 'feedback-message error';
+            input.setCustomValidity('Invalid username format');
+            return;
+        }
+
+        // If we got here, the format is valid
+        feedbackElement.textContent = 'Username format is valid';
+        feedbackElement.className = 'feedback-message success';
+        input.setCustomValidity('');
+    }
+
+    validateEmail(input) {
+        const email = input.value.trim();
+        const feedbackElement = document.getElementById('email-feedback');
+
+        // Clear previous feedback
+        feedbackElement.textContent = '';
+        feedbackElement.className = 'feedback-message';
+
+        if (!email) {
+            return;
+        }
+
+        if (!this.emailRegex.test(email)) {
+            feedbackElement.textContent = 'Please enter a valid email address';
+            feedbackElement.className = 'feedback-message error';
+            input.setCustomValidity('Invalid email format');
+        } else {
+            feedbackElement.textContent = 'Email format is valid';
+            feedbackElement.className = 'feedback-message success';
+            input.setCustomValidity('');
+        }
+    }
+
+    validatePasswordStrength(input) {
+        const password = input.value;
+        const strengthDiv = document.getElementById('password-strength');
+
+        // Clear previous feedback
+        strengthDiv.textContent = '';
+        strengthDiv.className = 'password-strength';
+
+        if (!password) {
+            return;
+        }
+
+        // Check minimum length
+        if (password.length < 8) {
+            strengthDiv.textContent = 'Password is too short (minimum 8 characters)';
+            strengthDiv.className = 'password-strength weak';
+            input.setCustomValidity('Password must be at least 8 characters');
+            return;
+        }
+
+        // Check strength (simple version)
+        let strength = 0;
+        if (password.match(/[a-z]+/)) strength += 1;
+        if (password.match(/[A-Z]+/)) strength += 1;
+        if (password.match(/[0-9]+/)) strength += 1;
+        if (password.match(/[^a-zA-Z0-9]+/)) strength += 1;
+
+        if (strength < 2) {
+            strengthDiv.textContent = 'Weak password';
+            strengthDiv.className = 'password-strength weak';
+        } else if (strength < 4) {
+            strengthDiv.textContent = 'Moderate password';
+            strengthDiv.className = 'password-strength moderate';
+        } else {
+            strengthDiv.textContent = 'Strong password';
+            strengthDiv.className = 'password-strength strong';
+        }
+
+        input.setCustomValidity('');
+    }
+
+    validatePasswordMatch() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password');
+        const matchDiv = document.getElementById('password-match');
+
+        // Clear previous feedback
+        matchDiv.textContent = '';
+        matchDiv.className = 'feedback-message';
+
+        if (!confirmPassword.value) {
+            return;
+        }
+
+        if (password !== confirmPassword.value) {
+            matchDiv.textContent = 'Passwords do not match';
+            matchDiv.className = 'feedback-message error';
+            confirmPassword.setCustomValidity('Passwords do not match');
+        } else {
+            matchDiv.textContent = 'Passwords match';
+            matchDiv.className = 'feedback-message success';
+            confirmPassword.setCustomValidity('');
+        }
     }
 
     validateForm(formData) {
@@ -122,15 +269,26 @@ class RegisterForm {
         }
 
         // Validate email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!this.emailRegex.test(email)) {
             this.showError('Please enter a valid email address');
             return false;
         }
 
+        // Validate nickname
+        if (!this.usernameRegex.test(nickname)) {
+            this.showError('Invalid username format. Username must start with a letter and contain only letters, numbers, underscores, periods, and hyphens.');
+            return false;
+        }
+
+        // Check for @ in nickname
+        if (nickname.includes('@')) {
+            this.showError('Username cannot contain @ symbol');
+            return false;
+        }
+
         // Validate password
-        if (password.length < 6) {
-            this.showError('Password must be at least 6 characters long');
+        if (password.length < 8) {
+            this.showError('Password must be at least 8 characters long');
             return false;
         }
 
@@ -146,6 +304,9 @@ class RegisterForm {
         const errorMessageDiv = this.container.querySelector('.error-message');
         errorMessageDiv.textContent = message;
         errorMessageDiv.style.display = 'block';
+
+        // Scroll to the error message
+        errorMessageDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     clearError() {
@@ -160,12 +321,12 @@ class RegisterForm {
         const formData = new FormData(form);
 
         const registrationData = {
-            first_name: formData.get('first_name'),
-            last_name: formData.get('last_name'),
+            first_name: formData.get('first_name').trim(),
+            last_name: formData.get('last_name').trim(),
             age: parseInt(formData.get('age')),
             gender: formData.get('gender'),
-            email: formData.get('email'),
-            nickname: formData.get('nickname'),
+            email: formData.get('email').trim(),
+            nickname: formData.get('nickname').trim(),
             password: formData.get('password'),
             confirm_password: formData.get('confirm_password')
         };
@@ -185,10 +346,38 @@ class RegisterForm {
             const response = await api.register(registrationData);
 
             if (response.success) {
-                router.navigate('/login', true);
+                // Show success message before redirecting
+                this.container.innerHTML = `
+                    <div class="success-container">
+                        <h2>Registration Successful!</h2>
+                        <p>Welcome ${registrationData.first_name}! Your account has been created.</p>
+                        <p>You will be redirected to the login page shortly...</p>
+                    </div>
+                `;
+
+                // Redirect after a short delay
+                setTimeout(() => {
+                    router.navigate('/login', true);
+                }, 2000);
             }
         } catch (error) {
-            this.showError('Registration failed. Please try again.');
+            // Handle specific error messages
+            if (error.response && error.response.status === 409) {
+                if (error.response.data && error.response.data.message) {
+                    if (error.response.data.message.includes('Email')) {
+                        this.showError('Email already registered. Please use a different email address.');
+                    } else if (error.response.data.message.includes('Username') ||
+                        error.response.data.message.includes('Nickname')) {
+                        this.showError('Username already taken. Please choose a different username.');
+                    } else {
+                        this.showError(error.response.data.message);
+                    }
+                } else {
+                    this.showError('Registration failed. A user with this email or username already exists.');
+                }
+            } else {
+                this.showError('Registration failed. Please try again.');
+            }
         } finally {
             store.setLoading(false);
         }
