@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -22,7 +21,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		Age       int    `json:"age"`
 		Gender    string `json:"gender"`
 		Email     string `json:"email"`
-		Nickname  string `json:"nickname"` 
+		Nickname  string `json:"nickname"`
 		Password  string `json:"password"`
 	}
 
@@ -115,29 +114,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create session
-	sessionID := uuid.New().String()
-	_, err = tx.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, userID)
-	if err != nil {
-		SendError(w, "Error creating session", http.StatusInternalServerError)
-		return
-	}
-
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
 		SendError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-
-	// Set session cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session_id",
-		Value:    sessionID,
-		Path:     "/login",
-		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-	})
 
 	// Return success response with user data
 	w.Header().Set("Content-Type", "application/json")
