@@ -12,8 +12,12 @@ class ForumWebSocket {
     // Initialize the WebSocket connection
     init() {
         try {
-            this.socket = new WebSocket("ws://localhost:8081/ws");
-            logger.info('WebSocket initialized');
+            // Determine the correct WebSocket protocol based on the current page protocol
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const hostname = window.location.hostname;
+            this.socket = new WebSocket(`${protocol}//${hostname}:8081/ws`);
+            
+            logger.info('WebSocket initialized with', `${protocol}//${hostname}:8081/ws`);
             this.setupEventHandlers();
         } catch (error) {
             logger.error('WebSocket initialization error:', error);
