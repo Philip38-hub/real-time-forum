@@ -28,6 +28,12 @@ type MessageResponse struct {
 
 // GetUsersHandler returns a list of all users
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
+	// Validate HTTP method
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
@@ -59,6 +65,20 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Get last message timestamps for current user
+	lastMessageTimes, err := GetLastMessageTimes(session.UserID)
+	if err != nil {
+		log.Printf("Error getting last message times: %v", err)
+	}
+
+	// Add last message time to each user
+	for i, user := range users {
+		userId := user["id"].(string)
+		if timestamp, exists := lastMessageTimes[userId]; exists {
+			users[i]["lastMessageTime"] = timestamp
+		}
+	}
+
 	// Send response
 	response := MessageResponse{
 		Success: true,
@@ -66,7 +86,11 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetMessagesHandler returns messages between current user and another user
@@ -120,7 +144,11 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding JSON response: %v", err)
+		http.Error(w, "Error generating response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // SendMessageHandler handles message sending via HTTP (as fallback if WebSocket fails)
@@ -198,7 +226,11 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // MarkMessageAsReadHandler marks a message as read
@@ -232,7 +264,11 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // SaveMessage stores a private message in the database
