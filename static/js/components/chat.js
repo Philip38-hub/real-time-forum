@@ -153,10 +153,21 @@ class Chat {
             if (response.success) {
                 this.users = response.users;
 
-                // Update the unread messages from server data
+                // Process user data from server data
                 response.users.forEach(user => {
+                    // Handle unread counts
                     if (user.unread > 0) {
                         this.unreadMessages[user.id] = user.unread;
+                    }
+
+                    // Store last message time from server in our local cache
+                    if (user.lastMessageTime) {
+                        if (!this.messages[user.id]) {
+                            this.messages[user.id] = [];
+                        }
+
+                        // Store the server-provided timestamp for sorting purposes
+                        this.messages[user.id].lastServerTime = new Date(user.lastMessageTime).getTime();
                     }
                 });
 
@@ -556,14 +567,19 @@ class Chat {
     }
 
     getLastMessageTime(userId) {
-        if (!this.messages[userId] || this.messages[userId].length === 0) {
-            return null;
+        // First prioritize server-provided timestamps
+        if (this.messages[userId] && this.messages[userId].lastServerTime) {
+            return this.messages[userId].lastServerTime;
         }
 
-        const lastMessage = this.messages[userId][this.messages[userId].length - 1];
-        return new Date(lastMessage.timestamp).getTime();
-    }
+        // Then check for locally stored messages
+        if (this.messages[userId] && this.messages[userId].length > 0) {
+            const lastMessage = this.messages[userId][this.messages[userId].length - 1];
+            return new Date(lastMessage.timestamp).getTime();
+        }
 
+        return null;
+    }
     handleScroll() {
         if (this.chatMessages && this.chatMessages.scrollTop < 50 &&
             !this.isLoadingMessages && this.hasMoreMessages) {
