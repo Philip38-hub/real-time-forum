@@ -30,66 +30,73 @@ class RegisterForm {
                 <form onsubmit="registerForm.handleSubmit(event)">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="first_name">First Name:</label>
-                            <input type="text" id="first_name" name="first_name" required>
+                            <label for="first_name">First Name</label>
+                            <input type="text" id="first_name" name="first_name" placeholder="Enter first name" required>
                         </div>
                         <div class="form-group">
-                            <label for="last_name">Last Name:</label>
-                            <input type="text" id="last_name" name="last_name" required>
+                            <label for="last_name">Last Name</label>
+                            <input type="text" id="last_name" name="last_name" placeholder="Enter last name" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="age">Age:</label>
-                            <input type="number" id="age" name="age" min="13" required>
+                            <label for="age">Age</label>
+                            <input type="number" id="age" name="age" min="13" placeholder="Your age" required>
                         </div>
                         <div class="form-group">
-                            <label for="gender">Gender:</label>
-                            <select id="gender" name="gender" required>
-                                <option value="">Select Gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                            </select>
+                            <label for="gender">Gender</label>
+                            <div class="select-wrapper">
+                                <select id="gender" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="email">Email:</label>
+                        <label for="email">Email</label>
                         <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
                         <div id="email-feedback" class="feedback-message"></div>
                     </div>
 
                     <div class="form-group">
-                        <label for="nickname">Username:</label>
-                        <input type="text" id="nickname" name="nickname" required>
-                        <div class="form-hint">
-                            Username requirements:
-                            <ul>
-                                <li>Start with a letter</li>
-                                <li>3-30 characters long</li>
-                                <li>Only letters, numbers, underscores, periods, and hyphens</li>
-                                <li>No @ symbols allowed</li>
-                            </ul>
-                        </div>
+                        <label for="nickname">Nickname</label>
+                        <input type="text" id="nickname" name="nickname" placeholder="Choose a nickname" required>
                         <div id="nickname-feedback" class="feedback-message"></div>
+                        <div class="form-hint">
+                            Start with a letter, 3-30 characters, alphanumeric with ._- (no @ symbols)
+                        </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="password">Password:</label>
-                            <input type="password" id="password" name="password" required minlength="8">
-                            <div class="form-hint">Password must be at least 8 characters</div>
-                            <div id="password-strength" class="password-strength"></div>
+                            <label for="password">Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="password" name="password" required minlength="8" placeholder="Min. 8 characters">
+                                <button type="button" class="toggle-password" style="width: 2.5rem;" aria-label="Show password">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength-wrapper">
+                                <div id="password-strength" class="password-strength"></div>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label for="confirm_password">Confirm Password:</label>
-                            <input type="password" id="confirm_password" name="confirm_password" required>
+                            <label for="confirm_password">Confirm Password</label>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="confirm_password" name="confirm_password" required placeholder="Re-enter password">
+                                <button type="button" class="toggle-password" style="width: 2.5rem;" aria-label="Show password">
+                                    <i class="far fa-eye"></i>
+                                </button>
+                            </div>
                             <div id="password-match" class="feedback-message"></div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary">Register</button>
+                    <button type="submit" class="btn-primary">Create Account</button>
                 </form>
                 <p>Already have an account? <a href="/login">Login here</a></p>
             </div>
@@ -103,6 +110,25 @@ class RegisterForm {
             this.validatePasswordMatch();
         });
         this.container.querySelector('#confirm_password').addEventListener('input', () => this.validatePasswordMatch());
+
+        // Toggle password visibility
+        const toggleButtons = this.container.querySelectorAll('.toggle-password');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const passwordInput = e.target.closest('.password-input-wrapper').querySelector('input');
+                const icon = e.target.tagName === 'I' ? e.target : e.target.querySelector('i');
+
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
 
         // Add OAuth button handlers
         this.container.querySelector('.google-btn').addEventListener('click', (e) => {
@@ -130,7 +156,7 @@ class RegisterForm {
 
         // Check if contains @ symbol
         if (nickname.includes('@')) {
-            feedbackElement.textContent = 'Username cannot contain @ symbol';
+            feedbackElement.textContent = 'Nickname cannot contain @ symbol';
             feedbackElement.className = 'feedback-message error';
             input.setCustomValidity('Username cannot contain @ symbol');
             return;
@@ -138,14 +164,14 @@ class RegisterForm {
 
         // Check regex pattern
         if (!this.usernameRegex.test(nickname)) {
-            feedbackElement.textContent = 'Username must start with a letter and contain only letters, numbers, underscores, periods, and hyphens';
+            feedbackElement.textContent = 'Invalid nickname format';
             feedbackElement.className = 'feedback-message error';
             input.setCustomValidity('Invalid username format');
             return;
         }
 
         // If we got here, the format is valid
-        feedbackElement.textContent = 'Username format is valid';
+        feedbackElement.textContent = 'Nickname is available';
         feedbackElement.className = 'feedback-message success';
         input.setCustomValidity('');
     }
@@ -193,7 +219,7 @@ class RegisterForm {
             return;
         }
 
-        // Check strength (simple version)
+        // Check strength
         let strength = 0;
         if (password.match(/[a-z]+/)) strength += 1;
         if (password.match(/[A-Z]+/)) strength += 1;
@@ -349,6 +375,10 @@ class RegisterForm {
                 // Show success message before redirecting
                 this.container.innerHTML = `
                     <div class="success-container">
+                        <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                        </svg>
                         <h2>Registration Successful!</h2>
                         <p>Welcome ${registrationData.first_name}! Your account has been created.</p>
                         <p>You will be redirected to the login page shortly...</p>
