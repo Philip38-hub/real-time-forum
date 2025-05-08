@@ -76,6 +76,44 @@ class App {
                 }, 3000);
             }
         });
+
+        // Add global fetch error handler
+        this.setupGlobalFetchErrorHandler();
+    }
+
+    setupGlobalFetchErrorHandler() {
+        // Save the original fetch function
+        const originalFetch = window.fetch;
+
+        // Override the fetch function
+        window.fetch = async function (...args) {
+            try {
+                const response = await originalFetch.apply(this, args);
+
+                // If response is JSON and has an error field, handle it
+                if (response.headers.get('Content-Type')?.includes('application/json')) {
+                    const clonedResponse = response.clone();
+                    try {
+                        const data = await clonedResponse.json();
+                        if (!response.ok || (data && data.success === false)) {
+                            // Use helpMessage if available, otherwise fall back to error
+                            const errorMessage = data.helpMessage || data.error || `Error: ${response.status}`;
+                            store.setError(errorMessage);
+                        }
+                    } catch (e) {
+                        // Not JSON or parsing error, continue
+                    }
+                } else if (!response.ok) {
+                    // Handle non-JSON error responses
+                    store.setError(`Request failed: ${response.statusText || response.status}`);
+                }
+
+                return response;
+            } catch (error) {
+                store.setError(`Network error: ${error.message}`);
+                throw error;
+            }
+        };
     }
 
     async checkSession() {
@@ -83,7 +121,7 @@ class App {
             const currentPath = window.location.pathname;
             store.setLoading(true);
             const isLoggedIn = await api.checkSession();
-            
+
             // Only redirect if on a protected route and not logged in
             if (!isLoggedIn && currentPath !== '/' && currentPath !== '/login' && currentPath !== '/register') {
                 router.navigate('/login', true);
