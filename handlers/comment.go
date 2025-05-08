@@ -13,14 +13,14 @@ var PostID int
 // CommentHandler now returns JSON instead of redirecting
 func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		SendError(w, "Invalid request method", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	postID := r.FormValue("post_id")
 	postIDInt, err := strconv.Atoi(postID)
 	if err != nil {
-		SendError(w, "Invalid post ID format", http.StatusBadRequest)
+		RenderError(w, r, "invalid_input", http.StatusBadRequest)
 		return
 	} else {
 		PostID = postIDInt
@@ -30,23 +30,23 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIdFromSession(w, r)
 
 	if userID == "" {
-		SendError(w, "Please log in to comment on posts", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	if postID == "" {
-		SendError(w, "Post ID is required", http.StatusBadRequest)
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
 	if content == "" {
-		SendError(w, "Comment content cannot be empty", http.StatusBadRequest)
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
 	tx, err := db.Begin()
 	if err != nil {
-		SendError(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -55,17 +55,17 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	if parentID != "" {
 		parentIDInt, err := strconv.Atoi(parentID)
 		if err != nil {
-			SendError(w, "Invalid parent comment ID format", http.StatusBadRequest)
+			RenderError(w, r, "invalid_input", http.StatusBadRequest)
 			return
 		}
 
 		var parentPostID int
 		err = db.QueryRow("SELECT post_id FROM comments WHERE id = ?", parentIDInt).Scan(&parentPostID)
 		if err == sql.ErrNoRows {
-			SendError(w, "Parent comment not found", http.StatusNotFound)
+			RenderError(w, r, "not_found", http.StatusNotFound)
 			return
 		} else if err != nil {
-			SendError(w, "Database error", http.StatusInternalServerError)
+			HandleDatabaseError(w, r, err)
 			return
 		}
 
@@ -74,7 +74,7 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 			postIDInt, userID, content, parentIDInt, time.Now(),
 		)
 		if err != nil {
-			SendError(w, "Failed to insert comment", http.StatusInternalServerError)
+			HandleDatabaseError(w, r, err)
 			return
 		}
 
@@ -86,12 +86,12 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		SendError(w, "Failed to insert comment", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		SendError(w, "Error committing transaction", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -101,7 +101,7 @@ func CommentHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch the complete comment data to return
 	comment, err := GetCommentByID(int(commentID), userID)
 	if err != nil {
-		SendError(w, "Error fetching new comment", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 

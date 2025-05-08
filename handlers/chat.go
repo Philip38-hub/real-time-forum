@@ -30,14 +30,14 @@ type MessageResponse struct {
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate HTTP method
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -45,7 +45,7 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	users, err := GetUsers()
 	if err != nil {
 		log.Printf("Error getting users: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 
@@ -88,7 +88,7 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 }
@@ -98,14 +98,14 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	// Get user ID from URL
 	path := strings.TrimPrefix(r.URL.Path, "/api/messages/")
 	if path == "" {
-		http.Error(w, "User ID required", http.StatusBadRequest)
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
@@ -133,7 +133,7 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	messages, err := GetMessages(session.UserID, path, page, limit)
 	if err != nil {
 		log.Printf("Error getting messages: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 
@@ -146,7 +146,7 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding JSON response: %v", err)
-		http.Error(w, "Error generating response", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 }
@@ -156,13 +156,13 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	// Check method
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -170,13 +170,14 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	var msgRequest MessageRequest
 	err = json.NewDecoder(r.Body).Decode(&msgRequest)
 	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		RenderError(w, r, "invalid_input", http.StatusBadRequest)
 		return
 	}
 
 	// Validate message
 	if msgRequest.ReceiverId == "" || msgRequest.Content == "" {
-		http.Error(w, "Receiver ID and content are required", http.StatusBadRequest)
+		log.Printf("Receiver ID and content are required")
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
@@ -184,7 +185,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	senderName, err := GetNicknameById(session.UserID)
 	if err != nil {
 		log.Printf("Error getting sender nickname: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 
@@ -202,7 +203,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	messageId, err := SaveMessage(message)
 	if err != nil {
 		log.Printf("Error saving message: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 
@@ -228,7 +229,7 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 }
@@ -238,7 +239,7 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -246,7 +247,7 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	messageIdStr := r.URL.Query().Get("messageId")
 	messageId, err := strconv.ParseInt(messageIdStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid message ID", http.StatusBadRequest)
+		RenderError(w, r, "invalid_input", http.StatusBadRequest)
 		return
 	}
 
@@ -254,7 +255,7 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	err = MarkMessageAsRead(messageId)
 	if err != nil {
 		log.Printf("Error marking message as read: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 
@@ -266,7 +267,7 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 }

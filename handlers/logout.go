@@ -9,7 +9,7 @@ import (
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Only handle POST requests
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -19,7 +19,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		// Delete the session from the database
 		_, err = db.Exec("DELETE FROM sessions WHERE session_id = ?", sessionCookie.Value)
 		if err != nil {
-			http.Error(w, "Error deleting session", http.StatusInternalServerError)
+			HandleDatabaseError(w, r, err)
 			return
 		}
 

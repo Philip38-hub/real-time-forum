@@ -32,7 +32,7 @@ var reservedUsernames = map[string]bool{
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -47,7 +47,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&registerData); err != nil {
-		SendError(w, "Invalid request format", http.StatusBadRequest)
+		RenderError(w, r, "invalid_input", http.StatusBadRequest)
 		return
 	}
 
@@ -61,49 +61,47 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if registerData.FirstName == "" || registerData.LastName == "" ||
 		registerData.Email == "" || registerData.Nickname == "" ||
 		registerData.Password == "" || registerData.Gender == "" {
-		SendError(w, "All fields are required", http.StatusBadRequest)
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
 	if registerData.Age < 13 {
-		SendError(w, "You must be at least 13 years old", http.StatusBadRequest)
+		RenderError(w, r, "age_restriction", http.StatusBadRequest)
 		return
 	}
 
 	if registerData.Gender != "male" && registerData.Gender != "female" {
-		SendError(w, "Invalid gender selection", http.StatusBadRequest)
+		RenderError(w, r, "invalid_gender", http.StatusBadRequest)
 		return
 	}
 
 	// Validate email format
 	if !emailRegex.MatchString(registerData.Email) {
-		SendError(w, "Invalid email format", http.StatusBadRequest)
+		RenderError(w, r, "invalid_email", http.StatusBadRequest)
 		return
 	}
 
 	// Validate nickname/username format
 	if !usernameRegex.MatchString(registerData.Nickname) {
-		SendError(w,
-			"Invalid username format. Username must start with a letter, contain only letters, numbers, underscores, periods, and hyphens, and be between 3-30 characters.",
-			http.StatusBadRequest)
+		RenderError(w, r, "invalid_username_format", http.StatusBadRequest)
 		return
 	}
 
 	// Check if nickname contains @ symbol
 	if strings.Contains(registerData.Nickname, "@") {
-		SendError(w, "Username cannot contain @ symbol", http.StatusBadRequest)
+		RenderError(w, r, "username_contains_at", http.StatusBadRequest)
 		return
 	}
 
 	// Check if nickname is a reserved word
 	if reservedUsernames[strings.ToLower(registerData.Nickname)] {
-		SendError(w, "This username is reserved and cannot be used", http.StatusBadRequest)
+		RenderError(w, r, "reserved_username", http.StatusBadRequest)
 		return
 	}
 
 	// Validate password length
 	if len(registerData.Password) < 8 {
-		SendError(w, "Password must be at least 8 characters long", http.StatusBadRequest)
+		RenderError(w, r, "password_too_short", http.StatusBadRequest)
 		return
 	}
 
@@ -111,31 +109,31 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?)", registerData.Email).Scan(&count)
 	if err != nil {
-		SendError(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	if count > 0 {
-		SendError(w, "Email already registered", http.StatusConflict)
+		RenderError(w, r, "email_exists", http.StatusConflict)
 		return
 	}
 
 	// Check existing nickname (case insensitive)
 	err = db.QueryRow("SELECT COUNT(*) FROM users WHERE LOWER(nickname) = LOWER(?)", registerData.Nickname).Scan(&count)
 	if err != nil {
-		SendError(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	if count > 0 {
-		SendError(w, "Username already taken", http.StatusConflict)
+		RenderError(w, r, "username_taken", http.StatusConflict)
 		return
 	}
 
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(registerData.Password), bcrypt.DefaultCost)
 	if err != nil {
-		SendError(w, "Server error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -145,7 +143,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	// Start transaction
 	tx, err := db.Begin()
 	if err != nil {
-		SendError(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -165,13 +163,13 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		string(hashedPassword),
 	)
 	if err != nil {
-		SendError(w, "Error creating user", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
-		SendError(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 

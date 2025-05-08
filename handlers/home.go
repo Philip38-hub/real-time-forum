@@ -35,7 +35,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := db.Query(query, userID)
 	if err != nil {
-		SendError(w, "Error fetching posts", http.StatusInternalServerError)
+		RenderError(w, r, "Error fetching posts", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -59,7 +59,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 			&userDisliked,
 		)
 		if err != nil {
-			SendError(w, "Error scanning posts", http.StatusInternalServerError)
+			RenderError(w, r, "Error scanning posts", http.StatusInternalServerError)
 			return
 		}
 
@@ -76,7 +76,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		// Fetch comments for this post
 		comments, err := GetCommentsForPost(post.ID, userID)
 		if err != nil {
-			SendError(w, "Error fetching comments", http.StatusInternalServerError)
+			RenderError(w, r, "Error fetching comments", http.StatusInternalServerError)
 			return
 		}
 		post.Comments = comments
@@ -93,15 +93,5 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 		"success":    true,
 		"posts":      posts,
 		"isLoggedIn": userID != "",
-	})
-}
-
-// SendError sends a JSON error response
-func SendError(w http.ResponseWriter, message string, status int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"success": false,
-		"error":   message,
 	})
 }
