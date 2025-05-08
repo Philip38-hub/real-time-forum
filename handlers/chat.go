@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -27,6 +28,12 @@ type MessageResponse struct {
 
 // GetUsersHandler returns a list of all users
 func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
+	// Validate HTTP method
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	// Check if user is logged in
 	session, err := GetSession(r)
 	if err != nil || session.UserID == "" {
@@ -58,6 +65,20 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Get last message timestamps for current user
+	lastMessageTimes, err := GetLastMessageTimes(session.UserID)
+	if err != nil {
+		log.Printf("Error getting last message times: %v", err)
+	}
+
+	// Add last message time to each user
+	for i, user := range users {
+		userId := user["id"].(string)
+		if timestamp, exists := lastMessageTimes[userId]; exists {
+			users[i]["lastMessageTime"] = timestamp
+		}
+	}
+
 	// Send response
 	response := MessageResponse{
 		Success: true,
@@ -65,7 +86,11 @@ func GetUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetMessagesHandler returns messages between current user and another user
@@ -119,7 +144,11 @@ func GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding JSON response: %v", err)
+		http.Error(w, "Error generating response", http.StatusInternalServerError)
+		return
+	}
 }
 
 // SendMessageHandler handles message sending via HTTP (as fallback if WebSocket fails)
@@ -197,7 +226,11 @@ func SendMessageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // MarkMessageAsReadHandler marks a message as read
@@ -231,7 +264,11 @@ func MarkMessageAsReadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("Error encoding response: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 // SaveMessage stores a private message in the database
@@ -393,4 +430,51 @@ func GetUsers() ([]map[string]interface{}, error) {
 	}
 
 	return users, nil
+}
+
+// GetLastMessageTimes retrieves the most recent message timestamps for a given user.
+// It returns a map where the keys are the IDs of other users who have communicated
+// with the specified user, and the values are the timestamps of the last message
+// exchanged with each of those users.
+func GetLastMessageTimes(userId string) (map[string]time.Time, error) {
+	query := `
+    SELECT 
+        CASE 
+            WHEN sender_id = ? THEN receiver_id 
+            ELSE sender_id 
+        END as other_user_id,
+        MAX(timestamp) as last_timestamp
+    FROM private_messages
+    WHERE sender_id = ? OR receiver_id = ?
+    GROUP BY other_user_id
+    ORDER BY last_timestamp DESC
+    `
+
+	rows, err := db.Query(query, userId, userId, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	timestamps := make(map[string]time.Time)
+	for rows.Next() {
+		var otherUserId string
+		var timestampStr string
+
+		err := rows.Scan(&otherUserId, &timestampStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// Parse with the exact format including nanoseconds and timezone
+		const layout = "2006-01-02 15:04:05.999999999-07:00"
+		timestamp, err := time.Parse(layout, timestampStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse timestamp '%s': %v", timestampStr, err)
+		}
+
+		timestamps[otherUserId] = timestamp
+	}
+
+	return timestamps, nil
 }

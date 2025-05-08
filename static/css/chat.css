@@ -433,37 +433,37 @@
         height: 60px;
         border-radius: 50%;
         overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         transition: all 0.3s ease;
         z-index: 1000;
     }
-    
+
     #chat-container .chat-sidebar,
     #chat-container .chat-main {
         display: none;
     }
-    
+
     #chat-container.chat-expanded {
         width: 100%;
         max-width: 480px;
         height: 580px;
         border-radius: 10px;
     }
-    
+
     #chat-container.chat-expanded .chat-sidebar {
         display: block;
         width: 100%;
     }
-    
+
     #chat-container.chat-active.chat-expanded .chat-sidebar {
         display: none;
     }
-    
+
     #chat-container.chat-active.chat-expanded .chat-main {
         display: flex;
         width: 100%;
     }
-    
+
     .chat-toggle {
         display: flex;
         align-items: center;
@@ -478,7 +478,7 @@
         cursor: pointer;
         position: relative;
     }
-    
+
     #chat-container.chat-expanded .chat-toggle {
         position: absolute;
         top: 10px;
@@ -488,7 +488,7 @@
         font-size: 16px;
         z-index: 10;
     }
-    
+
     .unread-count {
         position: absolute;
         top: 0;
@@ -503,7 +503,7 @@
         align-items: center;
         justify-content: center;
     }
-    
+
     #chat-container.chat-hidden {
         opacity: 0;
         transform: translateY(20px);
@@ -521,4 +521,98 @@
         max-width: 100%;
         border-radius: 0;
     }
+}
+
+/**
+*
+* Registration/Login Form validation styles
+*
+**/
+.form-hint {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+.form-hint ul {
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+    padding-left: 1.5rem;
+}
+
+.form-hint li {
+    margin-bottom: 0.25rem;
+}
+
+.feedback-message {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0;
+    min-height: 1.2rem;
+}
+
+.feedback-message.error {
+    color: #d9534f;
+}
+
+.feedback-message.success {
+    color: #5cb85c;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+}
+
+.password-strength {
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    padding: 0.25rem 0;
+}
+
+.password-strength.weak {
+    color: #d9534f;
+}
+
+.password-strength.moderate {
+    color: #f0ad4e;
+}
+
+.password-strength.strong {
+    color: #5cb85c;
+}
+
+.success-container {
+    text-align: center;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 2rem;
+    border-radius: 0.25rem;
+    margin: 2rem auto;
+    max-width: 600px;
+}
+
+/* Input validation styles */
+input:invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+input:focus:invalid {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+input.valid,
+input:valid {
+    border-color: #28a745;
+}
+
+input:focus.valid,
+input:focus:valid {
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }

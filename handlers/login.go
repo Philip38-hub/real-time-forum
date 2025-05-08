@@ -34,11 +34,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		var hashedPassword string
 		var err error
 		if strings.Contains(loginData.Identifier, "@") {
-			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE email = ?", loginData.Identifier).Scan(
+			// Case-insensitive email comparison using LOWER() function
+			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE LOWER(email) = LOWER(?)", loginData.Identifier).Scan(
 				&user.ID, &user.Email, &user.Nickname, &hashedPassword,
 			)
 		} else {
-			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE nickname = ?", loginData.Identifier).Scan(
+			// Case-insensitive nickname comparison using LOWER() function
+			err = db.QueryRow("SELECT id, email, nickname, password FROM users WHERE LOWER(nickname) = LOWER(?)", loginData.Identifier).Scan(
 				&user.ID, &user.Email, &user.Nickname, &hashedPassword,
 			)
 		}
