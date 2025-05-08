@@ -19,7 +19,7 @@ func CurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("CurrentUserHandler: No session cookie found: %v", err)
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error":         "No session found",
+			"error":         "No session found, please log in",
 			"authenticated": false,
 		})
 		return
