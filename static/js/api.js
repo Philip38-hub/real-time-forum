@@ -7,21 +7,15 @@ class Api {
         const config = {
             ...options,
             headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
                 ...options.headers
             },
             credentials: 'include'
         };
 
-        // Add Content-Type only if not FormData or URLSearchParams
-        if (options.body && !(options.body instanceof FormData) && !(options.body instanceof URLSearchParams)) {
-            config.headers['Content-Type'] = 'application/json';
-        }
-
         try {
             const response = await fetch(`${this.baseUrl}${endpoint}`, config);
-            
+
             // Handle unauthorized without redirect
             if (response.status === 401) {
                 store.setUser(null);
@@ -30,7 +24,16 @@ class Api {
 
             // For error responses
             if (!response.ok) {
-                throw new Error('API request failed');
+                // Try to get error message from response
+                try {
+                    const errorData = await response.json();
+                    if (errorData && errorData.error) {
+                        throw new Error(errorData.error);
+                    }
+                } catch (parseError) {
+                    // If can't parse JSON, use status text
+                    throw new Error(`Request failed: ${response.statusText || response.status}`);
+                }
             }
 
             // Always try to parse JSON for our API endpoints
@@ -43,6 +46,8 @@ class Api {
             }
         } catch (error) {
             console.error('API Error:', error);
+            // Set the error in the store
+            store.setError(error.message || 'An error occurred');
             throw error;
         }
     }
@@ -56,7 +61,7 @@ class Api {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         if (response.success) {
             await store.setUser(response.user);
         }
@@ -80,7 +85,7 @@ class Api {
             if (window.webSocketManager && window.webSocketManager.socket) {
                 window.webSocketManager.socket.close(1000, "User logged out");
             }
-            
+
             // The server is returning a redirect, not JSON
             const response = await fetch('/logout', {
                 method: 'POST',
@@ -89,7 +94,7 @@ class Api {
                 },
                 credentials: 'same-origin'
             });
-            
+
             // Don't try to parse JSON, just check if response was successful
             if (response.ok) {
                 store.setUser(null);
@@ -216,14 +221,14 @@ class Api {
                 method: 'HEAD',
                 credentials: 'include'
             })
-            .then(response => {
-                // If we get any response, consider it a success
-                // The actual auth state will be handled by individual routes
-                resolve(true);
-            })
-            .catch(() => {
-                resolve(false);
-            });
+                .then(response => {
+                    // If we get any response, consider it a success
+                    // The actual auth state will be handled by individual routes
+                    resolve(true);
+                })
+                .catch(() => {
+                    resolve(false);
+                });
         });
     }
 
