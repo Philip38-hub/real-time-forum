@@ -76,6 +76,11 @@ class Api {
 
     async logout() {
         try {
+            // Close WebSocket connection before logging out
+            if (window.webSocketManager && window.webSocketManager.socket) {
+                window.webSocketManager.socket.close(1000, "User logged out");
+            }
+            
             // The server is returning a redirect, not JSON
             const response = await fetch('/logout', {
                 method: 'POST',
