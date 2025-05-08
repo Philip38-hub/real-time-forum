@@ -1,9 +1,10 @@
 package handlers
 
 import (
-	"html/template"
-	"log"
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // ErrorData represents the data passed to the error template
@@ -28,6 +29,18 @@ var (
 			ErrorMessage: "You must be logged in to perform this action",
 			HelpMessage:  "Please log in to your account to continue.",
 		},
+		"invalid_session": {
+			StatusCode:   http.StatusUnauthorized,
+			ErrorMessage: "Your session has expired",
+			HelpMessage:  "Please log in again to continue.",
+		},
+
+		// Method errors
+		"method_not_allowed": {
+			StatusCode:   http.StatusMethodNotAllowed,
+			ErrorMessage: "Method not allowed",
+			HelpMessage:  "This action can only be performed with a specific HTTP method.",
+		},
 
 		// Registration errors
 		"invalid_email": {
@@ -43,12 +56,37 @@ var (
 		"password_too_short": {
 			StatusCode:   http.StatusBadRequest,
 			ErrorMessage: "Password is too short",
-			HelpMessage:  "Password must be at least 6 characters long. Use a mix of letters, numbers, and symbols for better security.",
+			HelpMessage:  "Password must be at least 8 characters long. Use a mix of letters, numbers, and symbols for better security.",
 		},
-		"passwords_dont_match": {
+		"invalid_username_format": {
 			StatusCode:   http.StatusBadRequest,
-			ErrorMessage: "Passwords do not match",
-			HelpMessage:  "The passwords you entered don't match. Please try again.",
+			ErrorMessage: "Invalid username format",
+			HelpMessage:  "Username must start with a letter, contain only letters, numbers, underscores, periods, and hyphens, and be between 3-30 characters.",
+		},
+		"username_contains_at": {
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "Username cannot contain @ symbol",
+			HelpMessage:  "Please choose a username without the @ symbol.",
+		},
+		"reserved_username": {
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "This username is reserved",
+			HelpMessage:  "This username is reserved and cannot be used. Please choose a different username.",
+		},
+		"username_taken": {
+			StatusCode:   http.StatusConflict,
+			ErrorMessage: "Username already taken",
+			HelpMessage:  "This username is already taken. Please choose a different username.",
+		},
+		"age_restriction": {
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "Age restriction",
+			HelpMessage:  "You must be at least 13 years old to register.",
+		},
+		"invalid_gender": {
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "Invalid gender selection",
+			HelpMessage:  "Please select a valid gender option.",
 		},
 
 		// Input validation errors
@@ -62,8 +100,18 @@ var (
 			ErrorMessage: "Required fields are missing",
 			HelpMessage:  "Please fill out all required fields marked with an asterisk (*).",
 		},
+		"duplicate_like": {
+			StatusCode:   http.StatusBadRequest,
+			ErrorMessage: "You have already liked/disliked this post",
+			HelpMessage:  "You can only like or dislike a post once.",
+		},
 
-		// Resource errors
+		// Not found errors
+		"not_found": {
+			StatusCode:   http.StatusNotFound,
+			ErrorMessage: "Page not found",
+			HelpMessage:  "The page you are looking for might have been removed or is temporarily unavailable.",
+		},
 		"post_not_found": {
 			StatusCode:   http.StatusNotFound,
 			ErrorMessage: "Post not found",
@@ -104,7 +152,7 @@ var (
 // RenderErrorFunc is the type for rendering error responses
 type RenderErrorFunc func(w http.ResponseWriter, r *http.Request, errorKey string, statusCode int)
 
-// RenderError renders the error template with the given error message and status code
+// RenderError renders an error response
 func renderError(w http.ResponseWriter, r *http.Request, errorKey string, statusCode int) {
 	// Get user's login status
 	userID := GetUserIdFromSession(w, r)
@@ -113,28 +161,39 @@ func renderError(w http.ResponseWriter, r *http.Request, errorKey string, status
 	// Get error data from the map, or use default if not found
 	errorData, exists := ErrorMessages[errorKey]
 	if !exists {
+		// If the error key doesn't exist, create a generic error with the key as the message
 		errorData = ErrorData{
 			StatusCode:   statusCode,
-			ErrorMessage: errorKey,
+			ErrorMessage: errorKey, // Use the error key as the message
 			HelpMessage:  "Please try again or contact support if the problem persists.",
 		}
 	}
 	errorData.IsLoggedIn = isLoggedIn
 
-	// Parse and execute the error template
-	tmpl, err := template.ParseFiles("templates/error.html")
-	if err != nil {
-		log.Printf("Error parsing error template: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	// Check if this is an API request or a browser request
+	isAPIRequest := r.Header.Get("X-Requested-With") == "XMLHttpRequest" ||
+		r.Header.Get("Accept") == "application/json"
+
+	// For API requests, return JSON
+	if isAPIRequest {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(errorData.StatusCode)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":     false,
+			"error":       errorData.ErrorMessage,
+			"helpMessage": errorData.HelpMessage,
+			"statusCode":  errorData.StatusCode,
+			"isLoggedIn":  errorData.IsLoggedIn,
+		})
 		return
 	}
 
-	w.WriteHeader(errorData.StatusCode)
-	if err := tmpl.Execute(w, errorData); err != nil {
-		log.Printf("Error executing error template: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	redirectURL := fmt.Sprintf("/error?code=%d&message=%s&help=%s",
+		errorData.StatusCode,
+		url.QueryEscape(errorData.ErrorMessage),
+		url.QueryEscape(errorData.HelpMessage))
+
+	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
 // RenderError is a function variable that can be mocked in tests
