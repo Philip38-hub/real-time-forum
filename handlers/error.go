@@ -7,7 +7,7 @@ import (
 // HandleDatabaseError handles database-related errors
 func HandleDatabaseError(w http.ResponseWriter, r *http.Request, err error) {
 	if err != nil {
-		RenderError(w, r, "Database Error", http.StatusInternalServerError)
+		RenderError(w, r, "database_error", http.StatusInternalServerError)
 		return
 	}
 }

@@ -46,7 +46,7 @@ type ChatMessage struct {
 func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -54,7 +54,7 @@ func WebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", cookie.Value).Scan(&userID)
 	if err != nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 

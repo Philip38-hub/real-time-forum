@@ -18,14 +18,14 @@ type CommentLikeResponse struct {
 // CommentLikeHandler handles liking/disliking comments
 func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Get user ID from session
 	userID := GetUserIdFromSession(w, r)
 	if userID == "" {
-		http.Error(w, "Please log in to like or dislike comments", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -34,13 +34,13 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	isLike := r.FormValue("is_like")
 
 	if commentID == "" {
-		http.Error(w, "Comment ID is required", http.StatusBadRequest)
+		RenderError(w, r, "missing_fields", http.StatusBadRequest)
 		return
 	}
 
 	commentIDInt, err := strconv.Atoi(commentID)
 	if err != nil {
-		http.Error(w, "Invalid comment ID", http.StatusBadRequest)
+		RenderError(w, r, "invalid_input", http.StatusBadRequest)
 		return
 	}
 
@@ -49,11 +49,11 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM comments WHERE id = ?)", commentIDInt).Scan(&exists)
 	if err != nil {
 		log.Printf("Error checking comment existence: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 	if !exists {
-		http.Error(w, "Comment not found", http.StatusNotFound)
+		RenderError(w, r, "not_found", http.StatusNotFound)
 		return
 	}
 
@@ -63,7 +63,7 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	tx, err := db.Begin()
 	if err != nil {
 		log.Printf("Error starting transaction: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 	defer tx.Rollback()
@@ -77,7 +77,7 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error checking existing like: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Error updating like status: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -116,10 +116,9 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 				ELSE NULL 
 			END
 	`, commentIDInt, commentIDInt, commentIDInt, userID, commentIDInt, userID).Scan(&response.LikeCount, &response.DislikeCount, &userLiked)
-
 	if err != nil {
 		log.Printf("Error getting updated counts: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -132,7 +131,7 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
 		log.Printf("Error committing transaction: %v", err)
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
@@ -140,7 +139,7 @@ func CommentLikeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding response: %v", err)
-		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		RenderError(w, r, "server_error", http.StatusInternalServerError)
 		return
 	}
 }

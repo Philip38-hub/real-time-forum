@@ -2,12 +2,18 @@ class Router {
     constructor() {
         this.routes = [];
         this.notFoundHandler = () => {
-            document.getElementById('main-container').innerHTML = '<h1>404 - Page Not Found</h1>';
+            const options = {
+                statusCode: 404,
+                title: 'Page Not Found',
+                message: 'The page you are looking for does not exist or has been moved.',
+                helpText: 'Please check the URL or go back to the homepage.'
+            };
+            errorPage.render(options);
         };
 
         // Handle browser navigation events
         window.addEventListener('popstate', () => this.handleRoute());
-        
+
         // Intercept link clicks for client-side routing
         document.addEventListener('click', (e) => {
             if (e.target.matches('a[href^="/"]')) {
@@ -22,7 +28,7 @@ class Router {
         const pattern = path
             .replace(/:\w+/g, '([^/]+)') // Convert :param to capture group
             .replace(/\*/g, '.*'); // Convert * to match anything
-        
+
         this.routes.push({
             pattern: new RegExp(`^${pattern}$`),
             handler,
@@ -44,18 +50,36 @@ class Router {
         } else {
             window.history.pushState(null, '', fullPath);
         }
-        
+
         this.handleRoute();
     }
 
     async handleRoute() {
         try {
             const path = window.location.pathname;
-            
+            console.log('Router handling path:', path);
+
+            // Special case for error route
+            if (path === '/error') {
+                console.log('Detected error route, rendering error page');
+                // Make sure the error page is shown and main content is hidden
+                const errorRoute = this.routes.find(route => route.pattern.test('/error'));
+                if (errorRoute) {
+                    await errorRoute.handler();
+                    return;
+                }
+            } else {
+                // For non-error routes, make sure to hide the error page
+                if (window.errorPage) {
+                    errorPage.hideErrorPage();
+                }
+            }
+
             // Find matching route
             const route = this.routes.find(route => route.pattern.test(path));
-            
+
             if (!route) {
+                console.log('No route found for path:', path);
                 this.notFoundHandler();
                 return;
             }
@@ -72,7 +96,7 @@ class Router {
 
             // Extract params from URL
             const params = path.match(route.pattern).slice(1);
-            
+
             // Ensure store and auth state is ready
             await new Promise(resolve => setTimeout(resolve, 0));
 
@@ -80,29 +104,62 @@ class Router {
             try {
                 store.setLoading(true);
                 await route.handler(...params);
+            } catch (error) {
+                console.error('Route handler error:', error);
+                errorPage.render({
+                    statusCode: 500,
+                    title: 'Internal Error',
+                    message: 'An error occurred while loading the page',
+                    helpText: 'Please try again later or contact support if the problem persists.'
+                });
             } finally {
                 store.setLoading(false);
             }
 
         } catch (error) {
             console.error('Route handler error:', error);
-            store.setError('An error occurred while loading the page');
+            errorPage.render({
+                statusCode: 500,
+                title: 'Internal Error',
+                message: 'An error occurred while loading the page',
+                helpText: 'Please try again later or contact support if the problem persists.'
+            });
         }
     }
 
     setNotFoundHandler(handler) {
-        this.notFoundHandler = handler;
+        this.notFoundHandler = handler || (() => {
+            errorPage.render({
+                statusCode: 404,
+                title: 'Page Not Found',
+                message: 'The page you are looking for does not exist or has been moved.',
+                helpText: 'Please check the URL or go back to the homepage.'
+            });
+        });
     }
 
     // Helper to setup main container and sidebar for most pages
     setupContainer() {
+        console.log('Setting up container');
         const container = document.querySelector('.container');
-        if (!container) return;
+        if (!container) {
+            console.error('Container element not found!');
+            return;
+        }
+
+        console.log('Container found, setting up layout');
         container.innerHTML = `
             <aside class="sidebar" id="sidebar-container"></aside>
             <main id="main-container"></main>
             <div id="chat-container"></div>
         `;
+
+        // Update the reference in the ErrorPage component
+        if (window.errorPage) {
+            errorPage.container = document.getElementById('main-container');
+            console.log('Updated errorPage.container:', errorPage.container);
+        }
+
         const sidebar = new Sidebar();
         sidebar.render();
         chat.render();
@@ -121,7 +178,7 @@ class Router {
                     if (!Array.isArray(posts)) {
                         throw new Error('Invalid posts data received');
                     }
-                    await store.setPosts(posts); 
+                    await store.setPosts(posts);
                     // Create and render PostList
                     const postList = new PostList();
                     postList.render();
@@ -180,7 +237,7 @@ class Router {
             this.setupContainer();
             const params = new URLSearchParams(window.location.search);
             const category = params.get('category');
-            
+
             if (!category) {
                 this.navigate('/', true);
                 return;
@@ -210,7 +267,28 @@ class Router {
                 store.setLoading(false);
             }
         }, { authRequired: true });
-        
+
+        // Error page
+        this.addRoute('/error', () => {
+            console.log('Error route handler executing');
+
+            // Parse error parameters from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const statusCode = parseInt(urlParams.get('code') || '404');
+            const message = urlParams.get('message') || 'An error occurred';
+            const helpText = urlParams.get('help') || 'Please try again or contact support.';
+
+            console.log('Rendering error page with:', { statusCode, message, helpText });
+
+            // Render the error page
+            errorPage.render({
+                statusCode: statusCode,
+                title: `Error ${statusCode}`,
+                message: message,
+                helpText: helpText
+            });
+        });
+
     }
 }
 

@@ -20,12 +20,12 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
-			SendError(w, "Invalid request format", http.StatusBadRequest)
+			RenderError(w, r, "invalid_input", http.StatusBadRequest)
 			return
 		}
 
 		if loginData.Identifier == "" || loginData.Password == "" {
-			SendError(w, "Identifier and password are required", http.StatusBadRequest)
+			RenderError(w, r, "missing_fields", http.StatusBadRequest)
 			return
 		}
 
@@ -45,17 +45,17 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 		if err == sql.ErrNoRows {
-			SendError(w, "Invalid credentials", http.StatusUnauthorized)
+			RenderError(w, r, "invalid_credentials", http.StatusUnauthorized)
 			return
 		} else if err != nil {
-			SendError(w, "Database error", http.StatusInternalServerError)
+			HandleDatabaseError(w, r, err)
 			return
 		}
 
 		// Compare passwords
 		err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(loginData.Password))
 		if err != nil {
-			SendError(w, "Invalid credentials", http.StatusUnauthorized)
+			RenderError(w, r, "invalid_credentials", http.StatusUnauthorized)
 			return
 		}
 
@@ -66,7 +66,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 			// Delete existing session
 			_, err = db.Exec("DELETE FROM sessions WHERE user_id = ?", user.ID)
 			if err != nil {
-				SendError(w, "Database error", http.StatusInternalServerError)
+				HandleDatabaseError(w, r, err)
 				return
 			}
 		}
@@ -75,7 +75,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		sessionID := uuid.New().String()
 		_, err = db.Exec("INSERT INTO sessions (session_id, user_id) VALUES (?, ?)", sessionID, user.ID)
 		if err != nil {
-			SendError(w, "Error creating session", http.StatusInternalServerError)
+			HandleDatabaseError(w, r, err)
 			return
 		}
 
@@ -100,5 +100,5 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If not POST, return error
-	SendError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	RenderError(w, r, "method_not_allowed", http.StatusMethodNotAllowed)
 }

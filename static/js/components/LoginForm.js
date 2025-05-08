@@ -30,7 +30,12 @@ class LoginForm {
                     <input type="text" id="identifier" name="identifier" placeholder="Email or Nickname" required>
                     <br>
                     <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" required>
+                        <button type="button" class="toggle-password" style="width: 2.5rem;" aria-label="Show password">
+                            <i class="far fa-eye"></i>
+                        </button>
+                    </div>
                     <br>
                     <button type="submit">Login</button>
                 </form>
@@ -47,6 +52,23 @@ class LoginForm {
         this.container.querySelector('.github-btn').addEventListener('click', (e) => {
             e.preventDefault();
             window.location.href = '/auth/github/login';
+        });
+
+        // Add toggle password visibility functionality
+        const toggleButton = this.container.querySelector('.toggle-password');
+        toggleButton.addEventListener('click', (e) => {
+            const passwordInput = e.target.closest('.password-input-wrapper').querySelector('input');
+            const icon = e.target.tagName === 'I' ? e.target : e.target.querySelector('i');
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         });
     }
 
@@ -82,7 +104,7 @@ class LoginForm {
                     router.navigate('/', true);
                     setTimeout(resolve, 100);
                 });
-            } 
+            }
         } catch (error) {
             this.showError('Login failed. Invalid credentials.');
         } finally {

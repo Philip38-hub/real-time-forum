@@ -8,7 +8,7 @@ import (
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserIdFromSession(w, r)
 	if userID == "" {
-		SendError(w, "Unauthorized", http.StatusUnauthorized)
+		RenderError(w, r, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -19,21 +19,21 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 		userID,
 	).Scan(&user.ID, &user.Email, &user.Nickname)
 	if err != nil {
-		SendError(w, "Failed to fetch user data", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	// Get user's created posts
 	createdPosts, err := getCreatedPosts(userID)
 	if err != nil {
-		SendError(w, "Failed to fetch created posts", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
 	// Get posts liked by user
 	likedPosts, err := getLikedPosts(userID)
 	if err != nil {
-		SendError(w, "Failed to fetch liked posts", http.StatusInternalServerError)
+		HandleDatabaseError(w, r, err)
 		return
 	}
 
