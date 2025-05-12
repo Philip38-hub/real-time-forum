@@ -1,4 +1,4 @@
-# Web Forum Project
+# Real Time Forum
 
 ## Project Overview
 This project aims to build an enhanced web forum where users can interact through posts, comments, and private messages—all in real time. The forum will support live discussions via WebSockets and maintain a seamless user experience with a single-page application architecture.
@@ -72,25 +72,10 @@ To install this project, follow these steps:
    ```bash
    go get ./...
    ```
-
-## Usage
-To run the project with docker, use the following command:
-1. Make it executable with this command
-```bash
-chmod +x script.sh
-```
-2. Run with this command
-```bash
-./script.sh
-```
-- This script will stop and remove any existing container, build the Docker image, and run the container, making it accessible on port 8080.
-
-## Usage without docker
-- Run with
-``` go
-go run .
-```
-
+4. Run program
+   ```go
+   go run .
+   ```
 ## Testing & Troubleshooting
 To run tests, use:
 ```bash
