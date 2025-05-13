@@ -100,11 +100,6 @@ var (
 			ErrorMessage: "Required fields are missing",
 			HelpMessage:  "Please fill out all required fields marked with an asterisk (*).",
 		},
-		"duplicate_like": {
-			StatusCode:   http.StatusBadRequest,
-			ErrorMessage: "You have already liked/disliked this post",
-			HelpMessage:  "You can only like or dislike a post once.",
-		},
 
 		// Not found errors
 		"not_found": {

@@ -80,7 +80,7 @@ func LikeHandler(w http.ResponseWriter, r *http.Request) {
 		_, err = db.Exec("INSERT INTO likes (post_id, user_id, is_like) VALUES (?, ?, ?)", postID, userID, isLike)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed") {
-				RenderError(w, r, "duplicate_like", http.StatusBadRequest)
+				RenderError(w, r, "invalid_input", http.StatusBadRequest)
 				return
 			}
 			HandleDatabaseError(w, r, err)
