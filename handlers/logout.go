@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 )
@@ -16,6 +17,24 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the session cookie
 	sessionCookie, err := r.Cookie("session_id")
 	if err == nil {
+		log.Printf("LogoutHandler: Found session_id: %s", sessionCookie.Value)
+
+		// Get user ID from session
+		var userID string
+		err = db.QueryRow("SELECT user_id FROM sessions WHERE session_id = ?", sessionCookie.Value).Scan(&userID)
+		if err == nil && userID != "" {
+			// Broadcast user offline status
+			BroadcastUserStatus(userID, false)
+
+			// Close any existing WebSocket connection
+			clientsMutex.Lock()
+			if conn, exists := clients[userID]; exists {
+				conn.Close()
+				delete(clients, userID)
+			}
+			clientsMutex.Unlock()
+		}
+
 		// Delete the session from the database
 		_, err = db.Exec("DELETE FROM sessions WHERE session_id = ?", sessionCookie.Value)
 		if err != nil {
