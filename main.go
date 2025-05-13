@@ -12,14 +12,15 @@ import (
 
 // Define valid frontend routes
 var validFrontendRoutes = map[string]bool{
-	"/":         true,
-	"/login":    true,
-	"/register": true,
-	"/profile":  true,
-	"/post":     true,
-	"/posts":    true,
-	"/messages": true,
-	"/error":    true,
+	"/":            true,
+	"/login":       true,
+	"/register":    true,
+	"/profile":     true,
+	"/post":        true,
+	"/posts":       true,
+	"/messages":    true,
+	"/error":       true,
+	"/create-post": true,
 }
 
 func main() {
