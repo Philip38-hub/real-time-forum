@@ -165,7 +165,6 @@
     background-color: #f9f9f9;
     display: flex;
     align-items: center;
-    /* justify-content: space-between; */
 }
 
 .back-button {
@@ -426,7 +425,7 @@
 }
 
 /* Responsive styles for the chat container */
-@media screen and (max-width: 1000px) {
+@media(max-width: 1000px) and (max-width:600px) {
     #chat-container {
         position: fixed;
         top: 780px;
@@ -517,25 +516,6 @@
     }
 }
 
-/* Additional responsive adjustments */
-@media screen and (max-width: 480px) {
-    #chat-container.chat-expanded {
-        top: auto;
-        bottom: 0;
-        right: 0;
-        left: 0;
-        width: 100%;
-        height: 88%;
-        max-width: 100%;
-        border-radius: 0;
-    }
-}
-
-/**
-*
-* Registration/Login Form validation styles
-*
-**/
 .form-hint {
     font-size: 0.8rem;
     color: #666;
