@@ -10,13 +10,13 @@ class RegisterForm {
             <div class="auth-container">
                 <h1>Register</h1>
                 <div class="error-message" style="display: none;"></div>
-                <!-- Google Sign-In Button -->
+                
+                <!-- Commenting out social login buttons until they're active
                 <a href="/auth/google/login" class="google-btn">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
                     <span>Sign up with Google</span>
                 </a>
 
-                <!-- GitHub Sign-In Button -->
                 <a href="/auth/github/login" class="github-btn">
                     <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo">
                     <span>Sign up with GitHub</span>
@@ -25,6 +25,7 @@ class RegisterForm {
                 <div class="oauth-divider">
                     <span>or</span>
                 </div>
+                -->
 
                 <!-- Registration Form -->
                 <form onsubmit="registerForm.handleSubmit(event)">
@@ -130,6 +131,7 @@ class RegisterForm {
             });
         });
 
+        /* Commenting out OAuth button handlers until they're active
         // Add OAuth button handlers
         this.container.querySelector('.google-btn').addEventListener('click', (e) => {
             e.preventDefault();
@@ -140,6 +142,7 @@ class RegisterForm {
             e.preventDefault();
             window.location.href = '/auth/github/login';
         });
+        */
     }
 
     validateNickname(input) {

@@ -8,13 +8,13 @@ class LoginForm {
             <div class="auth-container">
                 <h1>Login</h1>
                 <div class="error-message" style="display: none;"></div>
-                <!-- Google Sign-In Button -->
+                
+                <!-- Commenting out social login buttons until they're active
                 <a href="/auth/google/login" class="google-btn">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
                     <span>Sign in with Google</span>
                 </a>
 
-                <!-- GitHub Sign-In Button -->
                 <a href="/auth/github/login" class="github-btn">
                     <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo">
                     <span>Sign in with GitHub</span>
@@ -23,6 +23,7 @@ class LoginForm {
                 <div class="oauth-divider">
                     <span>or</span>
                 </div>
+                -->
 
                 <!-- Traditional Login Form -->
                 <form onsubmit="loginForm.handleSubmit(event)">
@@ -43,17 +44,6 @@ class LoginForm {
             </div>
         `;
 
-        // Add click handlers for OAuth buttons
-        this.container.querySelector('.google-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = '/auth/google/login';
-        });
-
-        this.container.querySelector('.github-btn').addEventListener('click', (e) => {
-            e.preventDefault();
-            window.location.href = '/auth/github/login';
-        });
-
         // Add toggle password visibility functionality
         const toggleButton = this.container.querySelector('.toggle-password');
         toggleButton.addEventListener('click', (e) => {
@@ -70,6 +60,19 @@ class LoginForm {
                 icon.classList.add('fa-eye');
             }
         });
+
+        /* Commenting out OAuth button handlers until they're active
+        // Add click handlers for OAuth buttons
+        this.container.querySelector('.google-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/auth/google/login';
+        });
+
+        this.container.querySelector('.github-btn').addEventListener('click', (e) => {
+            e.preventDefault();
+            window.location.href = '/auth/github/login';
+        });
+        */
     }
 
     showError(message) {
