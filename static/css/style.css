@@ -68,6 +68,9 @@ nav a:hover {
     border-radius: 10px 10px 0 0;
     margin-bottom: 0;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .profile-header h1 {
@@ -79,7 +82,7 @@ nav a:hover {
 .profile-header p {
     margin: 6px 0;
     color: var(--text-color);
-    font-size: 1.08rem;
+    font-size: 1.0rem;
 }
 
 .profile-section {
@@ -914,6 +917,18 @@ img {
         text-align: center;
         padding: 10px;
         margin: 0;
+    }
+
+    .profile-container{
+        overflow: hidden;
+    }
+
+    .profile-header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .profile-header p {
+        font-size: 0.9rem;
     }
 
     .profile-sections {
