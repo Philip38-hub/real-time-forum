@@ -7,11 +7,17 @@ class Api {
         const config = {
             ...options,
             headers: {
-                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 ...options.headers
             },
             credentials: 'include'
         };
+
+        // Add Content-Type only if not FormData or URLSearchParams
+        if (options.body && !(options.body instanceof FormData) && !(options.body instanceof URLSearchParams)) {
+            config.headers['Content-Type'] = 'application/json';
+        }
 
         try {
             const response = await fetch(`${this.baseUrl}${endpoint}`, config);
