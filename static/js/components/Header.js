@@ -25,7 +25,7 @@ class Header {
             ${user ? `
                 <a href="/profile" 
                    style="display: flex; align-items: center; gap: 8px; color: #4A76a8;">
-                    <span style="font-size: 18px; margin-top: 10px;">Welcome, ${user.Nickname}</span>
+                    <span class="welcome-text" style="font-size: 18px; margin-top: 10px;">Welcome, ${user.Nickname}</span>
                     <span class="material-icons" style="font-size: 30px; margin-top: 10px; vertical-align: middle;">person</span>                  
                 </a>
                 <a href="/create-post" class="auth-button create-post">
