@@ -369,45 +369,57 @@ class RegisterForm {
             // Remove confirm_password before sending to API
             delete registrationData.confirm_password;
 
-            const response = await api.register(registrationData);
+            const response = await fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(registrationData),
+                credentials: 'include'
+            });
 
-            if (response.success) {
-                // Show success message before redirecting
-                this.container.innerHTML = `
-                    <div class="success-container">
-                        <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
-                            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
-                            <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
-                        </svg>
-                        <h2>Registration Successful!</h2>
-                        <p>Welcome ${registrationData.first_name}! Your account has been created.</p>
-                        <p>You will be redirected to the login page shortly...</p>
-                    </div>
-                `;
+            const data = await response.json();
 
-                // Redirect after a short delay
-                setTimeout(() => {
-                    router.navigate('/login', true);
-                }, 2000);
-            }
-        } catch (error) {
-            // Handle specific error messages
-            if (error.response && error.response.status === 409) {
-                if (error.response.data && error.response.data.message) {
-                    if (error.response.data.message.includes('Email')) {
+            if (!response.ok) {
+                if (response.status === 409) {
+                    // Check if error message contains specific keywords
+                    const errorMsg = data.error || data.message || data.errorMessage || '';
+                    if (errorMsg.toLowerCase().includes('email')) {
                         this.showError('Email already registered. Please use a different email address.');
-                    } else if (error.response.data.message.includes('Username') ||
-                        error.response.data.message.includes('Nickname')) {
+                    } else if (errorMsg.toLowerCase().includes('username') ||
+                        errorMsg.toLowerCase().includes('nickname')) {
                         this.showError('Username already taken. Please choose a different username.');
                     } else {
-                        this.showError(error.response.data.message);
+                        this.showError('Registration failed. A user with this email or username already exists.');
                     }
                 } else {
-                    this.showError('Registration failed. A user with this email or username already exists.');
+                    this.showError(data.error || 'Registration failed. Please try again.');
                 }
-            } else {
-                this.showError('Registration failed. Please try again.');
+                return;
             }
+
+            // Success case
+            this.container.innerHTML = `
+                <div class="success-container">
+                    <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                        <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+                        <path class="checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                    </svg>
+                    <h2>Registration Successful!</h2>
+                    <p>Welcome ${registrationData.first_name}! Your account has been created.</p>
+                    <p>You will be redirected to the login page shortly...</p>
+                </div>
+            `;
+
+            // Redirect after a short delay
+            setTimeout(() => {
+                router.navigate('/login', true);
+            }, 2000);
+        } catch (error) {
+            console.error('Registration error:', error);
+            this.showError('Registration failed. Please try again.');
         } finally {
             store.setLoading(false);
         }
