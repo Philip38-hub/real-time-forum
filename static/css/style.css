@@ -850,6 +850,10 @@ img {
         gap: 8px;
     }
 
+    .welcome-text {
+        display: none;
+    }
+
     /* Reduce the person icon size */
     .material-icons[href="/profile"] {
         font-size: 24px !important;
