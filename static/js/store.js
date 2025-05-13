@@ -245,12 +245,15 @@ class Store {
 
     addReply(postId, parentCommentId, reply) {
         const updatedPosts = this.state.posts.map(post => {
-            if (post.ID === postId) {
+            if (String(post.ID) === String(postId)) {
                 const updatedComments = post.Comments.map(comment => {
-                    if (comment.ID === parentCommentId) {
+                    if (String(comment.ID) === String(parentCommentId)) {
+                        // Ensure ReplyCount is incremented
+                        const currentReplyCount = comment.ReplyCount || 0;
                         return {
                             ...comment,
-                            Replies: [reply, ...(comment.Replies || [])]
+                            Replies: [reply, ...(comment.Replies || [])],
+                            ReplyCount: currentReplyCount + 1
                         };
                     }
                     return comment;
