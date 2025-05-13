@@ -427,8 +427,8 @@
 @media screen and (max-width: 1000px) {
     #chat-container {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
+        top: 830px;
+        left: 20px;
         width: 60px;
         height: 60px;
         border-radius: 50%;
@@ -448,6 +448,7 @@
         max-width: 480px;
         height: 580px;
         border-radius: 10px;
+        top: 320px;
     }
 
     #chat-container.chat-expanded .chat-sidebar {
